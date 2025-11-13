@@ -20,9 +20,9 @@ import com.example.modular_ledger.ui.theme.Modular_ledgerTheme
 
 class MainActivity : AppCompatActivity() {
     companion object {
-    private const val USE_LOCAL_SERVER = true // 切換開發模式
+    private const val USE_LOCAL_SERVER = true // 切換webview源
     private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
-    // private const val SERVER_URL = "http://192.168.1.100:3000/"  // 實體裝置用
+    // private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
     private const val LOCAL_URL = "file:///android_asset/www/index.html"
 }
 

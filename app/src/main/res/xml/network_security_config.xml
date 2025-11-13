@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- 允許所有明文流量 (僅用於開發環境) -->
-    <base-config cleartextTrafficPermitted="true">
+    <!-- Release 模式:預設禁止所有 HTTP 明文傳輸 -->
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
+    
+    <!-- Debug 模式:僅允許開發伺服器使用 HTTP -->
+    <debug-overrides>
+        <domain-config cleartextTrafficPermitted="true">
+            <!-- Android 模擬器的 localhost -->
+            <domain includeSubdomains="true">10.0.2.2</domain>
+            <!-- 實體裝置用 -->
+            <domain includeSubdomains="true">163.18.29.38</domain>
+            <!-- 本機 localhost -->
+            <domain includeSubdomains="true">localhost</domain>
+        </domain-config>
+    </debug-overrides>
 </network-security-config>
