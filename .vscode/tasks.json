@@ -1,0 +1,81 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "List AVDs",
+            "type": "shell",
+            "command": "${env:ANDROID_HOME}/emulator/emulator",
+            "args": ["-list-avds"],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Emulator",
+            "type": "shell",
+            "command": "emulator",
+            "args": [
+                "-avd",
+                "Medium_Phone_API_36.1"  // 替換成您的模擬器名稱
+            ],
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Debug APK",
+            "type": "shell",
+            "command": "./gradlew",
+            "args": ["assembleDebug"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Install APK",
+            "type": "shell",
+            "command": "${env:ANDROID_HOME}/platform-tools/adb",
+            "args": [
+                "install",
+                "-r",
+                "./app/build/outputs/apk/debug/app-debug.apk"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run App",
+            "type": "shell",
+            "command": "${env:ANDROID_HOME}/platform-tools/adb",
+            "args": [
+                "shell",
+                "am",
+                "start",
+                "-n",
+                "com.example.modular_ledger/.MainActivity"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Build and Run",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Build Debug APK",
+                "Install APK",
+                "Run App"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Start Live Server",
+            "type": "process",
+            "command": "live-server",
+            "args": [
+                "--port=3000"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/app/src/main/assets/www"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        }
+    ]
+}

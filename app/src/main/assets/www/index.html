@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>Smart Home Dashboard</title>
+    <link rel="stylesheet" href="css/main.css">
+    <!-- Framework7 CSS -->
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7/framework7-bundle.min.css"> -->
+    <!-- Iconify for icons -->
+    <!-- <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script> -->
+</head>
+
+<body>
+    <!-- Framework7 App Root -->
+    <div id="app">
+        <div class="view view-main">
+            <div class="page">
+                <!-- Header -->
+                <div class="page-content">
+                    <div class="dashboard-header">
+                        <div class="greeting">
+                            <h1>Hello, User! 👋</h1>
+                            <p class="subtitle">Welcome back to your smart home</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="icon-btn" id="refresh-btn">
+                                <span class="iconify" data-icon="mdi:refresh" data-width="24"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="stats-container">
+                        <div class="stat-card stat-lavender">
+                            <div class="stat-icon">
+                                <span class="iconify" data-icon="mdi:thermometer" data-width="32"></span>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value">24°C</span>
+                                <span class="stat-label">Temperature</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-mint">
+                            <div class="stat-icon">
+                                <span class="iconify" data-icon="mdi:water-percent" data-width="32"></span>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value">65%</span>
+                                <span class="stat-label">Humidity</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-peach">
+                            <div class="stat-icon">
+                                <span class="iconify" data-icon="mdi:lightning-bolt" data-width="32"></span>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-value">2.4kW</span>
+                                <span class="stat-label">Power</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Room Controls -->
+                    <div class="section-header">
+                        <h2>Rooms</h2>
+                    </div>
+                    <div class="rooms-grid">
+                        <div class="room-card">
+                            <div class="room-icon lavender-icon">
+                                <span class="iconify" data-icon="mdi:sofa" data-width="32"></span>
+                            </div>
+                            <h3>Living Room</h3>
+                            <p class="room-status">3 devices active</p>
+                            <div class="room-controls">
+                                <button class="control-btn active">
+                                    <span class="iconify" data-icon="mdi:lightbulb" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:air-conditioner" data-width="20"></span>
+                                </button>
+                                <button class="control-btn active">
+                                    <span class="iconify" data-icon="mdi:television" data-width="20"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="room-card">
+                            <div class="room-icon mint-icon">
+                                <span class="iconify" data-icon="mdi:bed" data-width="32"></span>
+                            </div>
+                            <h3>Bedroom</h3>
+                            <p class="room-status">2 devices active</p>
+                            <div class="room-controls">
+                                <button class="control-btn active">
+                                    <span class="iconify" data-icon="mdi:lightbulb" data-width="20"></span>
+                                </button>
+                                <button class="control-btn active">
+                                    <span class="iconify" data-icon="mdi:fan" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:speaker" data-width="20"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="room-card">
+                            <div class="room-icon peach-icon">
+                                <span class="iconify" data-icon="mdi:stove" data-width="32"></span>
+                            </div>
+                            <h3>Kitchen</h3>
+                            <p class="room-status">1 device active</p>
+                            <div class="room-controls">
+                                <button class="control-btn active">
+                                    <span class="iconify" data-icon="mdi:lightbulb" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:robot-vacuum" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:coffee-maker" data-width="20"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="room-card">
+                            <div class="room-icon blue-icon">
+                                <span class="iconify" data-icon="mdi:shower" data-width="32"></span>
+                            </div>
+                            <h3>Bathroom</h3>
+                            <p class="room-status">All devices off</p>
+                            <div class="room-controls">
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:lightbulb" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:water-boiler" data-width="20"></span>
+                                </button>
+                                <button class="control-btn">
+                                    <span class="iconify" data-icon="mdi:speaker" data-width="20"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="section-header">
+                        <h2>Quick Actions</h2>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="action-card">
+                            <span class="iconify" data-icon="mdi:lightbulb-group" data-width="28"></span>
+                            <span>All Lights</span>
+                        </button>
+                        <button class="action-card">
+                            <span class="iconify" data-icon="mdi:door-open" data-width="28"></span>
+                            <span>Lock Doors</span>
+                        </button>
+                        <button class="action-card">
+                            <span class="iconify" data-icon="mdi:power" data-width="28"></span>
+                            <span>Away Mode</span>
+                        </button>
+                        <button class="action-card">
+                            <span class="iconify" data-icon="mdi:weather-night" data-width="28"></span>
+                            <span>Night Mode</span>
+                        </button>
+                    </div>
+
+                    <!-- Plugin Area -->
+                    <div id="plugin-area"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Framework7 JS -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/framework7/framework7-bundle.min.js"></script> -->
+    <!-- <script src="js/pluginManager.js"></script>
+    <script src="js/app.js"></script> -->
+
+    <script>
+        // 點擊刷新按鈕，重新載入 index.html
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            window.location.reload();
+        });
+
+        // Add click handlers for control buttons
+        document.querySelectorAll('.control-btn, .action-card').forEach(btn => {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                this.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+
+</html>

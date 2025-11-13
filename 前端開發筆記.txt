@@ -1,0 +1,17 @@
+前端開發框架將採用「Framework7 + pluginManager」
+支持webview熱更新UI
+範例結構
+assets/www/
+├─ index.html
+├─ js/
+│  ├─ app.js
+│  ├─ pluginManager.js
+├─ css/
+│  └─ main.css
+└─ plugins/
+   ├─ darkmode/
+   │  ├─ plugin.js
+   │  └─ style.css
+   └─ minimal/
+      ├─ plugin.js
+      └─ style.css

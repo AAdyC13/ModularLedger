@@ -19,6 +19,13 @@ import com.example.modular_ledger.ui.theme.Modular_ledgerTheme
 
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+    private const val USE_LOCAL_SERVER = true // 切換開發模式
+    private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
+    // private const val SERVER_URL = "http://192.168.1.100:3000/"  // 實體裝置用
+    private const val LOCAL_URL = "file:///android_asset/www/index.html"
+}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -28,6 +35,7 @@ class MainActivity : AppCompatActivity() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
+            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
         }
 
         webView.webViewClient = object : WebViewClient() {
@@ -39,11 +47,9 @@ class MainActivity : AppCompatActivity() {
 
         WebView.setWebContentsDebuggingEnabled(true)
 
-        // 若是本地前端 (放在 assets/www)
-        //webView.loadUrl("file:///android_asset/www/index.html")
-
-        // 測試網頁
-        webView.loadUrl("https://www.example.com/")
+        // 根據設定載入不同來源
+        val url = if (USE_LOCAL_SERVER) SERVER_URL else LOCAL_URL
+        webView.loadUrl(url)
     }
 }
 
