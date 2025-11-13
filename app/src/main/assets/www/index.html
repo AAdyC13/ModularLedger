@@ -14,9 +14,9 @@
         <!-- 上方功能菜單區 -->
         <header class="top-menu">
             <nav class="menu-container">
-                <button class="menu-btn">功能1</button>
+                <button class="menu-btn">日曆</button>
                 <div class="menu-divider"></div>
-                <button class="menu-btn">功能2</button>
+                <button class="menu-btn">清單</button>
                 <div class="menu-divider"></div>
                 <button class="menu-btn">功能3</button>
                 <div class="menu-divider"></div>
@@ -41,7 +41,7 @@
                 <div class="menu-divider"></div>
                 <button class="menu-btn">選項2</button>
                 <div class="menu-divider"></div>
-                <button class="menu-btn">選項3</button>
+                <button class="menu-btn" id="new-record-btn">記一筆</button>
                 <div class="menu-divider"></div>
                 <button class="menu-btn">選項4</button>
                 <div class="menu-divider"></div>
@@ -75,138 +75,200 @@
     </div>
 
     <script>
-        const settingBtn = document.getElementById('setting-btn');
-        const settingPanel = document.getElementById('setting-panel');
-        const settingOverlay = document.getElementById('setting-overlay');
-        const closeSettingBtn = document.getElementById('close-setting');
+        // 將 index.html 的腳本包裹在 IIFE 中
+        (function () {
+            const settingBtn = document.getElementById('setting-btn');
+            const settingPanel = document.getElementById('setting-panel');
+            const settingOverlay = document.getElementById('setting-overlay');
+            const closeSettingBtn = document.getElementById('close-setting');
 
-        function openSettings() {
-            settingOverlay.classList.add('active');
-            settingPanel.classList.add('active');
-        }
-
-        function closeSettings() {
-            settingOverlay.classList.remove('active');
-            settingPanel.classList.remove('active');
-        }
-
-        settingBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            openSettings();
-        });
-
-        closeSettingBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            closeSettings();
-        });
-
-        settingOverlay.addEventListener('click', function (e) {
-            closeSettings();
-        });
-
-        const settingContent = document.getElementById('setting-content');
-        const settingContentInner = document.getElementById('setting-content-inner');
-        const scrollbarThumb = document.getElementById('scrollbar-thumb');
-
-        let isDragging = false;
-        let startY = 0;
-        let scrollTop = 0;
-        let contentHeight = 0;
-        let containerHeight = 0;
-        let maxScroll = 0;
-
-        function updateScrollbar() {
-            contentHeight = settingContentInner.scrollHeight;
-            containerHeight = settingContent.clientHeight;
-            maxScroll = Math.max(0, contentHeight - containerHeight);
-
-            if (maxScroll > 0) {
-                const thumbHeight = Math.max(30, (containerHeight / contentHeight) * containerHeight);
-                const thumbTop = (Math.abs(scrollTop) / maxScroll) * (containerHeight - thumbHeight);
-                scrollbarThumb.style.height = thumbHeight + 'px';
-                scrollbarThumb.style.top = thumbTop + 'px';
+            function openSettings() {
+                settingOverlay.classList.add('active');
+                settingPanel.classList.add('active');
             }
-        }
 
-        settingContent.addEventListener('mousedown', function (e) {
-            isDragging = true;
-            startY = e.clientY;
-            scrollTop = parseFloat(settingContentInner.style.top || 0);
-            settingContent.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        settingContent.addEventListener('touchstart', function (e) {
-            isDragging = true;
-            startY = e.touches[0].clientY;
-            scrollTop = parseFloat(settingContentInner.style.top || 0);
-            settingContent.classList.add('dragging');
-        }, { passive: true });
-
-        document.addEventListener('mousemove', function (e) {
-            if (!isDragging) return;
-            const deltaY = e.clientY - startY;
-            const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
-            settingContentInner.style.top = newScrollTop + 'px';
-            scrollTop = newScrollTop;
-            updateScrollbar();
-        });
-
-        document.addEventListener('touchmove', function (e) {
-            if (!isDragging) return;
-            const deltaY = e.touches[0].clientY - startY;
-            const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
-            settingContentInner.style.top = newScrollTop + 'px';
-            scrollTop = newScrollTop;
-            updateScrollbar();
-        }, { passive: true });
-
-        document.addEventListener('mouseup', function () {
-            if (isDragging) {
-                isDragging = false;
-                settingContent.classList.remove('dragging');
+            function closeSettings() {
+                settingOverlay.classList.remove('active');
+                settingPanel.classList.remove('active');
             }
-        });
 
-        document.addEventListener('touchend', function () {
-            if (isDragging) {
-                isDragging = false;
-                settingContent.classList.remove('dragging');
-            }
-        });
-
-        settingContent.addEventListener('wheel', function (e) {
-            e.preventDefault();
-            const delta = e.deltaY;
-            const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop - delta));
-            settingContentInner.style.top = newScrollTop + 'px';
-            scrollTop = newScrollTop;
-            updateScrollbar();
-        }, { passive: false });
-
-        const observer = new ResizeObserver(() => {
-            updateScrollbar();
-        });
-        observer.observe(settingContent);
-        observer.observe(settingContentInner);
-
-        updateScrollbar();
-
-        document.querySelectorAll('.setting-item').forEach((item, index) => {
-            item.addEventListener('click', function (e) {
-                e.stopPropagation();
-                console.log('設定項目:', index + 1);
+            settingBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openSettings();
             });
-        });
 
-        document.querySelectorAll('.menu-btn').forEach(btn => {
-            if (btn.id !== 'setting-btn') {
-                btn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    console.log('按鈕點擊:', this.textContent);
-                });
+            closeSettingBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeSettings();
+            });
+
+            settingOverlay.addEventListener('click', function (e) {
+                closeSettings();
+            });
+
+            const settingContent = document.getElementById('setting-content');
+            const settingContentInner = document.getElementById('setting-content-inner');
+            const scrollbarThumb = document.getElementById('scrollbar-thumb');
+
+            let isDragging = false;
+            let startY = 0;
+            let scrollTop = 0;
+            let contentHeight = 0;
+            let containerHeight = 0;
+            let maxScroll = 0;
+
+            function updateScrollbar() {
+                contentHeight = settingContentInner.scrollHeight;
+                containerHeight = settingContent.clientHeight;
+                maxScroll = Math.max(0, contentHeight - containerHeight);
+
+                if (maxScroll > 0) {
+                    const thumbHeight = Math.max(30, (containerHeight / contentHeight) * containerHeight);
+                    const thumbTop = (Math.abs(scrollTop) / maxScroll) * (containerHeight - thumbHeight);
+                    scrollbarThumb.style.height = thumbHeight + 'px';
+                    scrollbarThumb.style.top = thumbTop + 'px';
+                }
             }
-        });
+
+            settingContent.addEventListener('mousedown', function (e) {
+                isDragging = true;
+                startY = e.clientY;
+                scrollTop = parseFloat(settingContentInner.style.top || 0);
+                settingContent.classList.add('dragging');
+                e.preventDefault();
+            });
+
+            settingContent.addEventListener('touchstart', function (e) {
+                isDragging = true;
+                startY = e.touches[0].clientY;
+                scrollTop = parseFloat(settingContentInner.style.top || 0);
+                settingContent.classList.add('dragging');
+            }, { passive: true });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!isDragging) return;
+                const deltaY = e.clientY - startY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
+                settingContentInner.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            });
+
+            document.addEventListener('touchmove', function (e) {
+                if (!isDragging) return;
+                const deltaY = e.touches[0].clientY - startY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
+                settingContentInner.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            }, { passive: true });
+
+            document.addEventListener('mouseup', function () {
+                if (isDragging) {
+                    isDragging = false;
+                    settingContent.classList.remove('dragging');
+                }
+            });
+
+            document.addEventListener('touchend', function () {
+                if (isDragging) {
+                    isDragging = false;
+                    settingContent.classList.remove('dragging');
+                }
+            });
+
+            settingContent.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                const delta = e.deltaY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop - delta));
+                settingContentInner.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            }, { passive: false });
+
+            const observer = new ResizeObserver(() => {
+                updateScrollbar();
+            });
+            observer.observe(settingContent);
+            observer.observe(settingContentInner);
+
+            updateScrollbar();
+
+            document.querySelectorAll('.setting-item').forEach((item, index) => {
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    console.log('設定項目:', index + 1);
+                });
+            });
+
+            // 頁面導航函數
+            async function navigateToPage(url) {
+                try {
+                    // 載入新頁面內容
+                    const response = await fetch(url);
+                    const html = await response.text();
+
+                    // 創建頁面容器
+                    const pageContainer = document.createElement('div');
+                    pageContainer.className = 'page-container';
+                    pageContainer.innerHTML = `<div class="page-content-wrapper">${html}</div>`;
+
+                    // 添加到 body
+                    document.body.appendChild(pageContainer);
+
+                    // 觸發重排以確保動畫生效
+                    pageContainer.offsetHeight;
+
+                    // 啟動滑入動畫
+                    pageContainer.classList.add('active');
+
+                    // 執行新頁面的腳本
+                    const scripts = pageContainer.querySelectorAll('script');
+                    scripts.forEach(script => {
+                        const newScript = document.createElement('script');
+                        if (script.src) {
+                            newScript.src = script.src;
+                        } else {
+                            newScript.textContent = script.textContent;
+                        }
+                        script.parentNode.replaceChild(newScript, script);
+                    });
+
+                    // 更新瀏覽器歷史記錄
+                    history.pushState({ page: url }, '', url);
+
+                } catch (error) {
+                    console.error('頁面載入失敗:', error);
+                    // 降級方案：使用傳統跳轉
+                    window.location.href = url;
+                }
+            }
+
+            // 處理瀏覽器返回按鈕
+            window.addEventListener('popstate', function (event) {
+                if (event.state && event.state.page) {
+                    // 移除當前頁面容器
+                    const containers = document.querySelectorAll('.page-container');
+                    containers.forEach(container => {
+                        container.classList.add('closing');
+                        setTimeout(() => container.remove(), 400);
+                    });
+                }
+            });
+
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                if (btn.id !== 'setting-btn') {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        if (this.id === 'new-record-btn') {
+                            navigateToPage('new_record.html');
+                        } else {
+                            console.log('按鈕點擊:', this.textContent);
+                        }
+                    });
+                }
+            });
+        })(); // 結束 IIFE
     </script>
 </body>
 

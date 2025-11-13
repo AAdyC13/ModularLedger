@@ -120,6 +120,10 @@ body {
     padding: 0;
 }
 
+.bottom-menu .menu-btn {
+    font-size: 16.8px;
+}
+
 .menu-container {
     display: grid;
     grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
@@ -527,6 +531,64 @@ body {
     }
 }
 
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToBottom {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+/* Page Container */
+.page-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    pointer-events: none;
+}
+
+.page-container.active {
+    pointer-events: auto;
+}
+
+.page-container .page-content-wrapper {
+    width: 100%;
+    height: 100%;
+    background: var(--bg-primary);
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.page-container.active .page-content-wrapper {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.page-container.closing .page-content-wrapper {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
 .stat-card,
 .room-card,
 .action-card {
@@ -703,4 +765,195 @@ body {
     width: 100%;
     height: 1px;
     background: var(--text-secondary);
+}
+
+/* ==========================================
+   Record Footer
+   ========================================== */
+
+.record-footer {
+    height: 10vh;
+}
+
+/* ==========================================
+   Calculator Panel
+   ========================================== */
+
+.calculator-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50vh;
+    background: var(--bg-card);
+    border-top: 1px solid var(--text-secondary);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-md);
+}
+
+.calculator-panel.active {
+    transform: translateY(0);
+}
+
+.calculator-display {
+    height: 20%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: var(--spacing-lg);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-md);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calculator-buttons {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.calc-btn {
+    border: none;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--neu-shadow-small);
+}
+
+.calc-btn:active {
+    box-shadow: var(--neu-shadow-inset);
+    transform: scale(0.95);
+}
+
+.calc-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.calc-operator {
+    background: linear-gradient(135deg, var(--color-lavender) 0%, var(--color-lavender-dark) 100%);
+    color: #7B68EE;
+}
+
+.calc-clear {
+    background: linear-gradient(135deg, var(--color-peach) 0%, var(--color-peach-dark) 100%);
+    color: #FF8C42;
+}
+
+.calc-backspace {
+    background: linear-gradient(135deg, var(--color-mint) 0%, var(--color-mint-dark) 100%);
+    color: #2D9D78;
+    grid-column: span 2;
+}
+
+.calc-equals {
+    background: linear-gradient(135deg, var(--color-blue) 0%, var(--color-blue-dark) 100%);
+    color: #4A90E2;
+    grid-column: span 2;
+}
+
+.form-input[readonly] {
+    cursor: pointer;
+    background: var(--bg-card);
+}
+
+/* ==========================================
+   Record Form
+   ========================================== */
+
+.record-main {
+    overflow: hidden;
+    padding: 0;
+    display: block;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: relative;
+    cursor: grab;
+}
+
+.record-main.dragging {
+    cursor: grabbing;
+}
+
+.record-form {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 8px;
+    padding: var(--spacing-lg);
+}
+
+.record-scrollbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.record-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    background: var(--text-secondary);
+    border-radius: 4px;
+    pointer-events: none;
+    transition: background 0.2s ease;
+}
+
+.form-group {
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.form-group label {
+    flex: 0 0 auto;
+    min-width: 80px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-input {
+    flex: 1;
+    padding: var(--spacing-md);
+    font-size: 16px;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    border: 1px solid var(--text-secondary);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+    background: var(--bg-card);
+}
+
+.form-input::placeholder {
+    color: var(--text-light);
 }

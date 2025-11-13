@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>記一筆</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+
+<body style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
+    <div id="app">
+        <!-- 上方功能菜單區 -->
+        <header class="top-menu">
+            <nav class="menu-container">
+                <button class="menu-btn" id="back-btn">捨棄</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn">支出</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn">收入</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn">轉帳</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn">暫存</button>
+            </nav>
+        </header>
+
+        <!-- 中間主要顯示區塊 -->
+        <main class="main-content record-main" id="record-main" style="height: 82vh;">
+            <div class="record-form" id="record-form">
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-1">時間</label>
+                    <input type="datetime-local" id="input-1" class="form-input" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-2">金額</label>
+                    <input type="text" id="input-2" class="form-input" placeholder="請輸入金額" readonly />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-3">類別</label>
+                    <input type="text" id="input-3" class="form-input" placeholder="請輸入類別" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-4">帳戶</label>
+                    <input type="text" id="input-4" class="form-input" placeholder="請輸入帳戶" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-5">地點</label>
+                    <input type="text" id="input-5" class="form-input" placeholder="請輸入地點" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-6">備註</label>
+                    <input type="text" id="input-6" class="form-input" placeholder="請輸入備註" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-7">輸入7</label>
+                    <input type="text" id="input-7" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-8">輸入8</label>
+                    <input type="text" id="input-8" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-9">輸入9</label>
+                    <input type="text" id="input-9" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-6">備註</label>
+                    <input type="text" id="input-6" class="form-input" placeholder="請輸入備註" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-7">輸入7</label>
+                    <input type="text" id="input-7" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-8">輸入8</label>
+                    <input type="text" id="input-8" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-9">輸入9</label>
+                    <input type="text" id="input-9" class="form-input" placeholder="請輸入內容" />
+                </div>
+                <div class="form-group" style="height: 25%;">
+                    <label for="input-10">輸入10</label>
+                    <input type="text" id="input-10" class="form-input" placeholder="請輸入內容" />
+                </div>
+            </div>
+            <div class="record-scrollbar">
+                <div class="record-scrollbar-thumb" id="record-scrollbar-thumb"></div>
+            </div>
+        </main>
+
+        <!-- 計算機介面 -->
+        <div id="calculator-panel" class="calculator-panel">
+            <div class="calculator-display" id="calculator-display">0</div>
+            <div class="calculator-buttons">
+                <button class="calc-btn" data-value="7" data-type="non_zero numbers">7</button>
+                <button class="calc-btn" data-value="8" data-type="non_zero numbers">8</button>
+                <button class="calc-btn" data-value="9" data-type="non_zero numbers">9</button>
+                <button class="calc-btn calc-operator" data-value="/" data-type="operator">÷</button>
+                <button class="calc-btn" data-value="4" data-type="non_zero numbers">4</button>
+                <button class="calc-btn" data-value="5" data-type="non_zero numbers">5</button>
+                <button class="calc-btn" data-value="6" data-type="non_zero numbers">6</button>
+                <button class="calc-btn calc-operator" data-value="*" data-type="operator">×</button>
+                <button class="calc-btn" data-value="1" data-type="non_zero numbers">1</button>
+                <button class="calc-btn" data-value="2" data-type="non_zero numbers">2</button>
+                <button class="calc-btn" data-value="3" data-type="non_zero numbers">3</button>
+                <button class="calc-btn calc-operator" data-value="-" data-type="operator">−</button>
+                <button class="calc-btn" data-value="0" data-type="zero numbers">0</button>
+                <button class="calc-btn" data-value="." data-type="decimal">.</button>
+                <button class="calc-btn calc-clear" data-value="C">C</button>
+                <button class="calc-btn calc-operator" data-value="+" data-type="operator">+</button>
+                <button class="calc-btn calc-backspace" data-value="del">⌫</button>
+                <button class="calc-btn calc-equals" data-value="=" data-type="calculate">=</button>
+            </div>
+        </div>
+
+        <!-- 下方功能菜單區 -->
+        <footer class="bottom-menu record-footer">
+            <nav class="menu-container" style="grid-template-columns: 1fr auto 1fr;">
+                <button class="menu-btn" id="save-btn">儲存</button>
+                <div class="menu-divider"></div>
+                <button class="menu-btn" id="add-another-btn">再記一筆</button>
+            </nav>
+        </footer>
+    </div>
+
+    <script>
+        // 將 new_record.html 的腳本包裹在 IIFE 中，避免變數衝突
+        (function () {
+            // 記錄類型變數：0=支出, 1=收入, 2=轉帳
+            let newRecordType = 0;
+
+            const backBtn = document.getElementById('back-btn');
+
+            backBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // 檢查是否在頁面容器中
+                const pageContainer = this.closest('.page-container');
+                if (pageContainer) {
+                    // 使用動畫關閉
+                    pageContainer.classList.add('closing');
+                    pageContainer.classList.remove('active');
+                    setTimeout(() => {
+                        pageContainer.remove();
+                        history.back();
+                    }, 400);
+                } else {
+                    // 降級方案：傳統跳轉
+                    window.location.href = 'index.html';
+                }
+            });
+
+            const saveBtn = document.getElementById('save-btn');
+            const addAnotherBtn = document.getElementById('add-another-btn');
+
+            saveBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('儲存記錄');
+                // TODO: 實作儲存邏輯
+            });
+
+            addAnotherBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('再記一筆');
+                // TODO: 清空表單或重新載入
+            });
+
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                if (btn.id !== 'back-btn' && btn.id !== 'save-btn' && btn.id !== 'add-another-btn') {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const btnText = this.textContent.trim();
+
+                        // 根據按鈕文字設定記錄類型
+                        if (btnText === '支出') {
+                            newRecordType = 0;
+                            console.log('切換至支出模式');
+                        } else if (btnText === '收入') {
+                            newRecordType = 1;
+                            console.log('切換至收入模式');
+                        } else if (btnText === '轉帳') {
+                            newRecordType = 2;
+                            console.log('切換至轉帳模式');
+                        } else if (btnText === '暫存') {
+                            console.log('暫存記錄, 當前類型:', newRecordType);
+                            // TODO: 實作暫存邏輯
+                        }
+
+                        console.log('按鈕點擊:', btnText, '當前記錄類型:', newRecordType);
+                    });
+                }
+            });
+
+            // 自定義滾動實現
+            const recordMain = document.getElementById('record-main');
+            const recordForm = document.getElementById('record-form');
+            const recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
+
+            let isDragging = false;
+            let startY = 0;
+            let scrollTop = 0;
+            let contentHeight = 0;
+            let containerHeight = 0;
+            let maxScroll = 0;
+
+            function updateScrollbar() {
+                contentHeight = recordForm.scrollHeight;
+                containerHeight = recordMain.clientHeight;
+                maxScroll = Math.max(0, contentHeight - containerHeight);
+
+                if (maxScroll > 0) {
+                    const thumbHeight = Math.max(30, (containerHeight / contentHeight) * containerHeight);
+                    const thumbTop = (Math.abs(scrollTop) / maxScroll) * (containerHeight - thumbHeight);
+                    recordScrollbarThumb.style.height = thumbHeight + 'px';
+                    recordScrollbarThumb.style.top = thumbTop + 'px';
+                }
+            }
+
+            recordMain.addEventListener('mousedown', function (e) {
+                if (e.target.closest('.form-input')) return;
+                isDragging = true;
+                startY = e.clientY;
+                scrollTop = parseFloat(recordForm.style.top || 0);
+                recordMain.classList.add('dragging');
+                e.preventDefault();
+            });
+
+            recordMain.addEventListener('touchstart', function (e) {
+                if (e.target.closest('.form-input')) return;
+                isDragging = true;
+                startY = e.touches[0].clientY;
+                scrollTop = parseFloat(recordForm.style.top || 0);
+                recordMain.classList.add('dragging');
+            }, { passive: true });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!isDragging) return;
+                const deltaY = e.clientY - startY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
+                recordForm.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            });
+
+            document.addEventListener('touchmove', function (e) {
+                if (!isDragging) return;
+                const deltaY = e.touches[0].clientY - startY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop + deltaY));
+                recordForm.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            }, { passive: true });
+
+            document.addEventListener('mouseup', function () {
+                if (isDragging) {
+                    isDragging = false;
+                    recordMain.classList.remove('dragging');
+                }
+            });
+
+            document.addEventListener('touchend', function () {
+                if (isDragging) {
+                    isDragging = false;
+                    recordMain.classList.remove('dragging');
+                }
+            });
+
+            recordMain.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                const delta = e.deltaY;
+                const newScrollTop = Math.max(-maxScroll, Math.min(0, scrollTop - delta));
+                recordForm.style.top = newScrollTop + 'px';
+                scrollTop = newScrollTop;
+                updateScrollbar();
+            }, { passive: false });
+
+            const observer = new ResizeObserver(() => {
+                updateScrollbar();
+            });
+            observer.observe(recordMain);
+            observer.observe(recordForm);
+
+            updateScrollbar();
+
+            // 計算機功能
+            const amountInput = document.getElementById('input-2');
+            const calculatorPanel = document.getElementById('calculator-panel');
+            const calculatorDisplay = document.getElementById('calculator-display');
+            let displayValue = '0';
+            let lastOperator = null;
+            let exceptionCalculated = false;
+
+            // 顯示/隱藏計算機
+            amountInput.addEventListener('click', function (e) {
+                e.stopPropagation();
+                calculatorPanel.classList.add('active');
+                // 從金額欄位載入初始值
+                if (amountInput.value && amountInput.value !== '0') {
+                    displayValue = amountInput.value;
+                } else {
+                    displayValue = '0';
+                }
+                updateDisplay();
+                updateButtonStates();
+            });
+
+            // 點擊其他地方關閉計算機
+            document.addEventListener('click', function (e) {
+                exceptionCalculated = false;
+                if (!calculatorPanel.contains(e.target) && e.target !== amountInput) {
+                    calculatorPanel.classList.remove('active');
+                }
+            });
+
+            // 計算機按鈕邏輯
+            document.querySelectorAll('.calc-btn').forEach(btn => {
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+
+                    // 檢查按鈕是否被禁用
+                    if (this.disabled) return;
+
+                    const value = this.dataset.value;
+
+                    if (value >= '0' && value <= '9') {
+                        handleNumber(value);
+                    } else if (value === '.') {
+                        handleDecimal();
+                    } else if (value === 'C') {
+                        handleClear();
+                    } else if (value === 'del') {
+                        handleBackspace();
+                    } else if (['+', '-', '*', '/'].includes(value)) {
+                        handleOperator(value);
+                    } else if (value === '=') {
+                        handleEquals();
+                    }
+
+                    // 每次操作後更新按鈕狀態
+                    updateButtonStates();
+                });
+            });
+
+            // 處理例外計算狀態
+            function handleExceptionCalculated() {
+                if (exceptionCalculated === true) {
+                    // 將金額欄位內容寫入 displayValue
+                    displayValue = amountInput.value || '0';
+                    exceptionCalculated = false;
+                }
+            }
+
+            // 更新按鈕啟用/禁用狀態
+            function updateButtonStates() {
+                const lastChar = displayValue[displayValue.length - 1];
+                const isOperator = ['+', '-', '*', '/'].includes(lastChar);
+                const isEmpty = displayValue === '0';
+                const hasOperator = /[+\-*/]/.test(displayValue);
+                const isMaxLength = displayValue.length >= 15;
+
+                // 獲取當前數字部分(最後一個運算符之後的內容)
+                const parts = displayValue.split(/[+\-*\/]/);
+                const currentNumber = parts[parts.length - 1];
+                const hasDecimal = currentNumber.includes('.');
+
+                document.querySelectorAll('.calc-btn').forEach(btn => {
+                    const type = btn.dataset.type;
+
+                    if (!type) {
+                        // C 和 ⌫ 永遠可用
+                        btn.disabled = false;
+                        return;
+                    }
+
+                    // 根據不同類型設置按鈕狀態
+                    if (type.includes('zero') || type.includes('non_zero')) {
+                        // 數字: 如果達到最大長度則禁用
+                        btn.disabled = isMaxLength;
+                    } else if (type.includes('decimal')) {
+                        // 小數點: 如果當前數字已有小數點、最後是運算符或達到最大長度,則禁用
+                        btn.disabled = hasDecimal || isOperator || isMaxLength;
+                    } else if (type.includes('operator')) {
+                        // 運算符: 如果最後是運算符、小數點或達到最大長度(且不是替換運算符),則禁用
+                        btn.disabled = isOperator || lastChar === '.' || (isMaxLength && !isOperator);
+                    } else if (type.includes('calculate')) {
+                        // =: 只在最後是運算符或小數點時禁用
+                        btn.disabled = isOperator || lastChar === '.';
+                    }
+                });
+            }
+
+            function handleNumber(num) {
+                handleExceptionCalculated();
+                if (displayValue === '0') {
+                    displayValue = num;
+                } else {
+                    displayValue += num;
+                }
+                updateDisplay();
+            }
+
+            function handleDecimal() {
+                handleExceptionCalculated();
+                // 檢查當前數字是否已經有小數點
+                const parts = displayValue.split(/[+\-*\/]/);
+                const lastPart = parts[parts.length - 1];
+                if (!lastPart.includes('.')) {
+                    displayValue += '.';
+                    updateDisplay();
+                }
+            }
+
+            function handleClear() {
+                displayValue = '0';
+                lastOperator = null;
+                exceptionCalculated = false;
+                updateDisplay();
+            }
+
+            function handleBackspace() {
+                handleExceptionCalculated();
+                if (displayValue.length > 1) {
+                    displayValue = displayValue.slice(0, -1);
+                } else {
+                    displayValue = '0';
+                }
+                updateDisplay();
+            }
+
+            function handleOperator(op) {
+                handleExceptionCalculated();
+                // 如果最後一個字符是運算符,則替換它
+                const lastChar = displayValue[displayValue.length - 1];
+                if (['+', '-', '*', '/'].includes(lastChar)) {
+                    displayValue = displayValue.slice(0, -1) + op;
+                } else {
+                    displayValue += op;
+                }
+                lastOperator = op;
+
+                updateDisplay();
+            }
+
+            // 檢查並處理小數位數(超過2位則四捨五入)
+            function checkAndRoundDecimals(numValue) {
+                let resultStr = numValue.toString();
+
+                // 禁止科學記數法,轉換為固定小數點格式
+                if (resultStr.includes('e')) {
+                    resultStr = numValue.toFixed(20).replace(/\.?0+$/, '');
+                }
+
+                const decimalIndex = resultStr.indexOf('.');
+                let needsRounding = false;
+
+                if (decimalIndex !== -1) {
+                    const decimalPart = resultStr.substring(decimalIndex + 1);
+                    needsRounding = decimalPart.length > 2;
+                }
+
+                if (needsRounding) {
+                    // 小數位數超過2位,四捨五入
+                    const roundedTo2 = Math.round(numValue * 100) / 100;
+                    displayValue = `ANS ≒ ${roundedTo2}`;
+                    amountInput.value = Math.abs(roundedTo2).toString();
+                    exceptionCalculated = true;
+                    return true; // 表示已處理
+                }
+
+                return false; // 表示不需要處理
+            }
+
+            function handleEquals(shouldClose = true) {
+                handleExceptionCalculated()
+                // 檢查是否有運算符(排除開頭的負號)
+                const hasOperator = /[+\-*/]/.test(displayValue.substring(1)) ||
+                    (displayValue.length > 1 && /[+*/]/.test(displayValue));
+
+                if (!hasOperator) {
+                    // 沒有運算,檢查是否為純數字
+                    const numValue = parseFloat(displayValue);
+                    if (isNaN(numValue) || !isFinite(numValue)) {
+                        // 非純數字或無限大,金額欄位輸出0
+                        amountInput.value = '0';
+                    } else {
+                        // 檢查小數位數是否超過2位
+                        if (checkAndRoundDecimals(numValue)) {
+                            // 已處理四捨五入,更新顯示後關閉計算機
+                            updateDisplay();
+                            if (shouldClose) {
+                                calculatorPanel.classList.remove('active');
+                            }
+                            return;
+                        }
+
+                        // 小數位數2位或更少
+                        if (numValue < 0) {
+                            // 負數,取絕對值
+                            amountInput.value = Math.abs(numValue).toString();
+                        } else {
+                            // 正常數字
+                            amountInput.value = displayValue;
+                        }
+                    }
+
+                    if (shouldClose) {
+                        calculatorPanel.classList.remove('active');
+                    }
+                    return;
+                }
+
+                try {
+                    // 計算結果
+                    const result = eval(displayValue);
+                    let numValue = parseFloat(result);
+
+                    // 檢查是否為有效數字
+                    if (isNaN(numValue) || !isFinite(numValue)) {
+                        displayValue = 'Error';
+                        amountInput.value = '0';
+                        exceptionCalculated = true;
+                        updateDisplay();
+                        return;
+                    }
+
+                    // 處理絕對值進行範圍判斷
+                    const absValue = Math.abs(numValue);
+
+                    // 大於 10^12
+                    if (absValue > 1e12) {
+                        displayValue = 'ANS > 10^12';
+                        amountInput.value = '0';
+                        exceptionCalculated = true;
+                        updateDisplay();
+                        return;
+                    }
+
+                    // 檢查小數位數是否超過2位
+                    if (checkAndRoundDecimals(numValue)) {
+                        // 已處理四捨五入,更新顯示(不關閉計算機)
+                        updateDisplay();
+                        return;
+                    }
+
+                    // 小數位數2位或更少,直接使用
+                    displayValue = numValue.toString();
+                    lastOperator = null;
+
+                    if (numValue < 0) {
+                        // 負數,取絕對值
+                        amountInput.value = Math.abs(numValue).toString();
+                    } else {
+                        // 正常數字
+                        amountInput.value = displayValue;
+                    }
+
+                    updateDisplay();
+
+                    // 有運算則不關閉計算機
+                } catch (e) {
+                    displayValue = 'Error';
+                    amountInput.value = '0';
+                    exceptionCalculated = true;
+                    updateDisplay();
+                }
+            }
+
+            function updateDisplay() {
+                calculatorDisplay.textContent = displayValue;
+                updateButtonStates();
+            }
+        })(); // 結束 IIFE
+    </script>
+</body>
+
+</html>
