@@ -1,18 +1,24 @@
+// app/src/main/java/com/example/modular_ledger/data/Expense.kt
 package com.example.modular_ledger.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
+/**
+ * 資料實體 (Entity)，代表 'expenses' 資料表中的單筆紀錄。
+ *
+ * @property id 自動產生的主鍵 (Primary Key)。
+ * @property timestamp 交易時間戳 (UNIX-based, 單位：秒)。儲存為 Long 以確保 2038 年問題相容性。
+ * @property amount 金額 (Double)。正數為收入，負數為支出。
+ * @property description 交易描述或備註。
+ */
 @Entity(tableName = "expenses")
 data class Expense(
 
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     
-    // 狀態為整數
     val timestamp: Long,
-
-    // 金額，浮點數，可用於幣值轉換，避免錯誤
     val amount: Double,
     val description: String
 )
