@@ -1,89 +1,12 @@
 /* ==========================================
-   Soft Pastel Neumorphism Theme
-   Colors: Lavender, Mint, Peach
+   UI Components - UI 組件樣式
+   Buttons, Cards, Forms, Menus
    ========================================== */
-
-:root {
-    /* Pastel Color Palette */
-    --color-lavender: #E6E6FA;
-    --color-lavender-dark: #D4D0F7;
-    --color-mint: #C9F4E8;
-    --color-mint-dark: #A8E6D4;
-    --color-peach: #FFD4BF;
-    --color-peach-dark: #FFC4A8;
-    --color-blue: #C4E4FF;
-    --color-blue-dark: #A8D5FF;
-    
-    /* Background */
-    --bg-primary: #F5F5FA;
-    --bg-card: #F5F5FA;
-    
-    /* Text Colors */
-    --text-primary: #5A5A7A;
-    --text-secondary: #8A8AA8;
-    --text-light: #B8B8CC;
-    
-    /* Neumorphic Shadows */
-    --shadow-light: #FFFFFF;
-    --shadow-dark: #D1D1E0;
-    
-    /* Neumorphic Effect */
-    --neu-shadow: 8px 8px 16px var(--shadow-dark),
-                  -8px -8px 16px var(--shadow-light);
-    --neu-shadow-small: 4px 4px 8px var(--shadow-dark),
-                        -4px -4px 8px var(--shadow-light);
-    --neu-shadow-inset: inset 4px 4px 8px var(--shadow-dark),
-                        inset -4px -4px 8px var(--shadow-light);
-    
-    /* Border Radius */
-    --radius-sm: 12px;
-    --radius-md: 20px;
-    --radius-lg: 28px;
-    --radius-full: 50%;
-    
-    /* Spacing */
-    --spacing-xs: 8px;
-    --spacing-sm: 12px;
-    --spacing-md: 16px;
-    --spacing-lg: 24px;
-    --spacing-xl: 32px;
-}
 
 /* ==========================================
-   Global Styles
+   Menu Components
    ========================================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    margin: 0;
-    padding: 0.3rem;
-    height: 100vh;
-    overflow: hidden;
-    box-sizing: border-box;
-}
-
-#app {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-    border: 1px solid var(--text-secondary);
-    border-radius: 12px;
-    overflow: hidden;
-}
-
-/* 上方功能菜單區 */
 .top-menu {
     height: 8vh;
     display: flex;
@@ -98,7 +21,6 @@ body {
     font-size: 16.8px;
 }
 
-/* 中間主要顯示區塊 */
 .main-content {
     height: 84vh;
     flex: 1;
@@ -109,7 +31,6 @@ body {
     justify-content: center;
 }
 
-/* 下方功能菜單區 */
 .bottom-menu {
     height: 8vh;
     display: flex;
@@ -161,55 +82,15 @@ body {
     background: var(--text-light);
 }
 
-.record-type-btn.active {
+.menu-btn.active {
     background: rgba(90, 90, 122, 0.5);
     color: var(--text-primary);
     font-weight: 600;
 }
 
-.content-container {
-    text-align: center;
-    max-width: 800px;
-    width: 100%;
-}
-
-.page {
-    background: var(--bg-primary);
-}
-
-.page-content {
-    padding: var(--spacing-lg);
-    padding-bottom: 80px;
-}
-
 /* ==========================================
-   Dashboard Header
+   Button Components
    ========================================== */
-
-.dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: var(--spacing-xl);
-}
-
-.greeting h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-}
-
-.greeting .subtitle {
-    font-size: 14px;
-    color: var(--text-secondary);
-    font-weight: 400;
-}
-
-.header-actions {
-    display: flex;
-    gap: var(--spacing-sm);
-}
 
 .icon-btn {
     width: 48px;
@@ -231,16 +112,59 @@ body {
     transform: scale(0.95);
 }
 
-/* ==========================================
-   Stats Container
-   ========================================== */
-
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
+.control-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: none;
+    box-shadow: var(--neu-shadow-small);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+.control-btn:active {
+    box-shadow: var(--neu-shadow-inset);
+    transform: scale(0.95);
+}
+
+.control-btn.active {
+    background: linear-gradient(135deg, var(--color-lavender) 0%, var(--color-mint) 100%);
+    color: #7B68EE;
+    box-shadow: var(--neu-shadow-inset);
+}
+
+.close-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    font-size: 32px;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    background: var(--bg-primary);
+    border-radius: 50%;
+}
+
+.close-btn:active {
+    background: var(--text-light);
+}
+
+/* ==========================================
+   Card Components
+   ========================================== */
 
 .stat-card {
     padding: var(--spacing-md);
@@ -251,6 +175,7 @@ body {
     align-items: center;
     gap: var(--spacing-sm);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .stat-card:active {
@@ -301,31 +226,6 @@ body {
     font-weight: 500;
 }
 
-/* ==========================================
-   Section Header
-   ========================================== */
-
-.section-header {
-    margin-bottom: var(--spacing-md);
-}
-
-.section-header h2 {
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-/* ==========================================
-   Room Cards
-   ========================================== */
-
-.rooms-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
-}
-
 .room-card {
     padding: var(--spacing-lg);
     border-radius: var(--radius-lg);
@@ -336,6 +236,7 @@ body {
     gap: var(--spacing-sm);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .room-card:hover {
@@ -396,43 +297,6 @@ body {
     justify-content: space-between;
 }
 
-.control-btn {
-    flex: 1;
-    height: 40px;
-    border-radius: var(--radius-sm);
-    background: var(--bg-card);
-    border: none;
-    box-shadow: var(--neu-shadow-small);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.control-btn:active {
-    box-shadow: var(--neu-shadow-inset);
-    transform: scale(0.95);
-}
-
-.control-btn.active {
-    background: linear-gradient(135deg, var(--color-lavender) 0%, var(--color-mint) 100%);
-    color: #7B68EE;
-    box-shadow: var(--neu-shadow-inset);
-}
-
-/* ==========================================
-   Quick Actions
-   ========================================== */
-
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-xl);
-}
-
 .action-card {
     padding: var(--spacing-lg);
     border-radius: var(--radius-lg);
@@ -449,6 +313,7 @@ body {
     font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     min-height: 100px;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .action-card:active {
@@ -461,161 +326,49 @@ body {
 }
 
 /* ==========================================
-   Responsive Design
+   Form Components
    ========================================== */
 
-@media (max-width: 480px) {
-    .page-content {
-        padding: var(--spacing-md);
-    }
-    
-    .greeting h1 {
-        font-size: 24px;
-    }
-    
-    .stats-container {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--spacing-sm);
-    }
-    
-    .stat-card {
-        padding: var(--spacing-sm);
-    }
-    
-    .stat-icon {
-        width: 48px;
-        height: 48px;
-    }
-    
-    .rooms-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: var(--spacing-sm);
-    }
-    
-    .room-card {
-        padding: var(--spacing-md);
-    }
-    
-    .room-icon {
-        width: 56px;
-        height: 56px;
-    }
+.form-group {
+    margin-bottom: var(--spacing-lg);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--spacing-md);
 }
 
-@media (min-width: 768px) {
-    .page-content {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: var(--spacing-xl);
-    }
-    
-    .stats-container {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .rooms-grid {
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    }
-    
-    .quick-actions {
-        grid-template-columns: repeat(4, 1fr);
-    }
+.form-group label {
+    flex: 0 0 auto;
+    min-width: 80px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-primary);
 }
 
-/* ==========================================
-   Animations
-   ========================================== */
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInFromBottom {
-    from {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes slideOutToBottom {
-    from {
-        transform: translateY(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-}
-
-/* Page Container */
-.page-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.page-container.active {
-    pointer-events: auto;
-}
-
-.page-container .page-content-wrapper {
-    width: 100%;
-    height: 100%;
+.form-input {
+    flex: 1;
+    padding: var(--spacing-md);
+    font-size: 16px;
+    color: var(--text-primary);
     background: var(--bg-primary);
-    transform: translateY(100%);
-    opacity: 0;
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--text-secondary);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
 }
 
-.page-container.active .page-content-wrapper {
-    transform: translateY(0);
-    opacity: 1;
+.form-input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+    background: var(--bg-card);
 }
 
-.page-container.closing .page-content-wrapper {
-    transform: translateY(100%);
-    opacity: 0;
+.form-input::placeholder {
+    color: var(--text-light);
 }
 
-.stat-card,
-.room-card,
-.action-card {
-    animation: fadeIn 0.5s ease-out forwards;
-}
-
-.stat-card:nth-child(1) { animation-delay: 0.1s; }
-.stat-card:nth-child(2) { animation-delay: 0.2s; }
-.stat-card:nth-child(3) { animation-delay: 0.3s; }
-
-.room-card:nth-child(1) { animation-delay: 0.1s; }
-.room-card:nth-child(2) { animation-delay: 0.2s; }
-.room-card:nth-child(3) { animation-delay: 0.3s; }
-.room-card:nth-child(4) { animation-delay: 0.4s; }
-
-/* ==========================================
-   Plugin Area
-   ========================================== */
-
-#plugin-area {
-    margin-top: var(--spacing-xl);
+.form-input[readonly] {
+    cursor: pointer;
+    background: var(--bg-card);
 }
 
 /* ==========================================
@@ -676,30 +429,6 @@ body {
     margin: 0;
     font-size: 24px;
     color: var(--text-primary);
-}
-
-.close-btn {
-    width: 40px;
-    height: 40px;
-    border: none;
-    background: transparent;
-    font-size: 32px;
-    color: var(--text-primary);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    line-height: 1;
-}
-
-.close-btn:hover {
-    background: var(--bg-primary);
-    border-radius: 50%;
-}
-
-.close-btn:active {
-    background: var(--text-light);
 }
 
 .setting-content {
@@ -771,14 +500,6 @@ body {
     width: 100%;
     height: 1px;
     background: var(--text-secondary);
-}
-
-/* ==========================================
-   Record Footer
-   ========================================== */
-
-.record-footer {
-    height: 10vh;
 }
 
 /* ==========================================
@@ -874,14 +595,13 @@ body {
     grid-column: span 2;
 }
 
-.form-input[readonly] {
-    cursor: pointer;
-    background: var(--bg-card);
-}
-
 /* ==========================================
-   Record Form
+   Record Components
    ========================================== */
+
+.record-footer {
+    height: 10vh;
+}
 
 .record-main {
     overflow: hidden;
@@ -927,39 +647,143 @@ body {
     transition: background 0.2s ease;
 }
 
-.form-group {
-    margin-bottom: var(--spacing-lg);
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: var(--spacing-md);
+/* ==========================================
+   Layout & Content
+   ========================================== */
+
+.content-container {
+    text-align: center;
+    max-width: 800px;
+    width: 100%;
 }
 
-.form-group label {
-    flex: 0 0 auto;
-    min-width: 80px;
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary);
-}
-
-.form-input {
-    flex: 1;
-    padding: var(--spacing-md);
-    font-size: 16px;
-    color: var(--text-primary);
+.page {
     background: var(--bg-primary);
-    border: 1px solid var(--text-secondary);
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
 }
 
-.form-input:focus {
-    outline: none;
-    border-color: var(--text-primary);
-    background: var(--bg-card);
+.page-content {
+    padding: var(--spacing-lg);
+    padding-bottom: 80px;
 }
 
-.form-input::placeholder {
-    color: var(--text-light);
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xl);
+}
+
+.greeting h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.greeting .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.section-header {
+    margin-bottom: var(--spacing-md);
+}
+
+.section-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.rooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+#plugin-area {
+    margin-top: var(--spacing-xl);
+}
+
+/* ==========================================
+   Responsive Design
+   ========================================== */
+
+@media (max-width: 480px) {
+    .page-content {
+        padding: var(--spacing-md);
+    }
+    
+    .greeting h1 {
+        font-size: 24px;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-sm);
+    }
+    
+    .stat-card {
+        padding: var(--spacing-sm);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .rooms-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: var(--spacing-sm);
+    }
+    
+    .room-card {
+        padding: var(--spacing-md);
+    }
+    
+    .room-icon {
+        width: 56px;
+        height: 56px;
+    }
+}
+
+@media (min-width: 768px) {
+    .page-content {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: var(--spacing-xl);
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .rooms-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    
+    .quick-actions {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
