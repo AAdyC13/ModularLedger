@@ -1,0 +1,51 @@
+/* ==========================================
+   Theme Variables - 主題變數
+   Soft Pastel Neumorphism Theme
+   Colors: Lavender, Mint, Peach
+   ========================================== */
+
+:root {
+    /* Pastel Color Palette */
+    --color-lavender: #E6E6FA;
+    --color-lavender-dark: #D4D0F7;
+    --color-mint: #C9F4E8;
+    --color-mint-dark: #A8E6D4;
+    --color-peach: #FFD4BF;
+    --color-peach-dark: #FFC4A8;
+    --color-blue: #C4E4FF;
+    --color-blue-dark: #A8D5FF;
+    
+    /* Background */
+    --bg-primary: #F5F5FA;
+    --bg-card: #F5F5FA;
+    
+    /* Text Colors */
+    --text-primary: #5A5A7A;
+    --text-secondary: #8A8AA8;
+    --text-light: #B8B8CC;
+    
+    /* Neumorphic Shadows */
+    --shadow-light: #FFFFFF;
+    --shadow-dark: #D1D1E0;
+    
+    /* Neumorphic Effect */
+    --neu-shadow: 8px 8px 16px var(--shadow-dark),
+                  -8px -8px 16px var(--shadow-light);
+    --neu-shadow-small: 4px 4px 8px var(--shadow-dark),
+                        -4px -4px 8px var(--shadow-light);
+    --neu-shadow-inset: inset 4px 4px 8px var(--shadow-dark),
+                        inset -4px -4px 8px var(--shadow-light);
+    
+    /* Border Radius */
+    --radius-sm: 12px;
+    --radius-md: 20px;
+    --radius-lg: 28px;
+    --radius-full: 50%;
+    
+    /* Spacing */
+    --spacing-xs: 8px;
+    --spacing-sm: 12px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+}
