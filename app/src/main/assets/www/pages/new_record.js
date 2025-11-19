@@ -1,68 +1,74 @@
 /**
  * New Record Page
- * 記帳頁面邏輯
+ * 記帳頁面邏輯 - 支援支出/收入/轉帳三種模式
  */
-export class NewRecordPage {
-    constructor(router) {
-        this.router = router;
-        this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
-        this.isDragging = false;
-        this.startY = 0;
-        this.scrollTop = 0;
-        this.contentHeight = 0;
-        this.containerHeight = 0;
-        this.maxScroll = 0;
+import { BasePage } from './BasePage.js';
 
-        this.init();
+export class NewRecordPage extends BasePage {
+    constructor(router) {
+        super(router);
+        this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
+        this.scrollController = null;
+        this.recordMain = null;
+        this.recordForm = null;
+        this.recordScrollbarThumb = null;
+
+        // 定義各模式的欄位配置
+        this.formConfigs = {
+            0: [ // 支出
+                { name: "時間", type: "datetime-local" },
+                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
+                { name: "類別", type: "text", placeholder: "選擇類別" },
+                { name: "帳戶", type: "text", placeholder: "選擇帳戶" },
+                { name: "地點", type: "text", placeholder: "輸入地點（可選）" },
+                { name: "備註", type: "text", placeholder: "新增備註（可選）" },
+                // 測試滾動用的額外欄位
+                { name: "輸入7", type: "text" },
+                { name: "輸入8", type: "text" },
+                { name: "輸入9", type: "text" },
+                { name: "輸入10", type: "text" },
+                { name: "輸入11", type: "text" },
+                { name: "輸入12", type: "text" },
+                { name: "輸入13", type: "text" },
+                { name: "輸入14", type: "text" }
+            ],
+            1: [ // 收入
+                { name: "時間", type: "datetime-local" },
+                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
+                { name: "類別", type: "text", placeholder: "選擇收入類別" },
+                { name: "帳戶", type: "text", placeholder: "選擇帳戶" },
+                { name: "地點", type: "text", placeholder: "輸入地點（可選）" },
+                { name: "備註", type: "text", placeholder: "新增備註（可選）" }
+            ],
+            2: [ // 轉帳
+                { name: "時間", type: "datetime-local" },
+                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
+                { name: "類別", type: "text", placeholder: "轉帳類型" },
+                { name: "帳戶", type: "text", placeholder: "選擇來源帳戶" },
+                { name: "地點", type: "text", placeholder: "選擇目標帳戶" },
+                { name: "備註", type: "text", placeholder: "新增備註（可選）" }
+            ]
+        };
+
+        // 自動生成的 ID 映射（運行時生成）
+        this.fieldIdMap = {};
     }
 
     /**
      * 初始化頁面
      */
     async init() {
-        // 載入計算機組件
-        await this.loadCalculator();
+        await super.init();
+
+        // 獲取 DOM 引用
+        this.recordMain = document.getElementById('record-main');
+        this.recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
 
         // 綁定事件
         this.bindEvents();
 
-        // 初始化滾動
-        this.initScroll();
-    }
-
-    /**
-     * 載入計算機組件
-     */
-    async loadCalculator() {
-        try {
-            const response = await fetch('../components/Calculator.html');
-            const html = await response.text();
-
-            const mountPoint = document.getElementById('calculator-mount-point');
-            if (mountPoint) {
-                mountPoint.innerHTML = html;
-
-                // 執行計算機腳本
-                const scripts = mountPoint.querySelectorAll('script');
-                scripts.forEach(script => {
-                    const newScript = document.createElement('script');
-                    if (script.src) {
-                        newScript.src = script.src;
-                    } else {
-                        newScript.textContent = script.textContent;
-                    }
-                    document.body.appendChild(newScript);
-                    script.remove();
-                });
-
-                // 初始化計算機
-                if (window.Calculator) {
-                    window.Calculator.init('input-2');
-                }
-            }
-        } catch (error) {
-            console.error('載入計算機失敗:', error);
-        }
+        // 載入默認子介面（支出）
+        await this.loadSubInterface(0);
     }
 
     /**
@@ -72,16 +78,16 @@ export class NewRecordPage {
         // 返回按鈕
         const backBtn = document.getElementById('back-btn');
         if (backBtn) {
-            backBtn.addEventListener('click', (e) => {
+            this.addEventListener(backBtn, 'click', (e) => {
                 e.preventDefault();
-                this.router.back();
+                this.navigate('pages/home.html');
             });
         }
 
         // 儲存按鈕
         const saveBtn = document.getElementById('save-btn');
         if (saveBtn) {
-            saveBtn.addEventListener('click', (e) => {
+            this.addEventListener(saveBtn, 'click', (e) => {
                 e.preventDefault();
                 this.saveRecord();
             });
@@ -90,26 +96,31 @@ export class NewRecordPage {
         // 再記一筆按鈕
         const addAnotherBtn = document.getElementById('add-another-btn');
         if (addAnotherBtn) {
-            addAnotherBtn.addEventListener('click', (e) => {
+            this.addEventListener(addAnotherBtn, 'click', (e) => {
                 e.preventDefault();
                 this.addAnotherRecord();
             });
         }
 
         // 記錄類型按鈕
-        document.querySelectorAll('.record-type-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        const typeBtns = document.querySelectorAll('.record-type-btn');
+        typeBtns.forEach(btn => {
+            this.addEventListener(btn, 'click', async (e) => {
                 e.preventDefault();
-                this.recordType = parseInt(btn.dataset.type);
-                this.updateRecordTypeButtons();
-                console.log('切換記錄類型:', this.recordType);
+                const newType = parseInt(btn.dataset.type);
+                if (newType !== this.recordType) {
+                    await this.loadSubInterface(newType);
+                    this.recordType = newType;
+                    this.updateRecordTypeButtons();
+                    console.log('切換記錄類型:', this.recordType);
+                }
             });
         });
 
         // 暫存按鈕
         const tempSaveBtn = document.getElementById('temp-save-btn');
         if (tempSaveBtn) {
-            tempSaveBtn.addEventListener('click', (e) => {
+            this.addEventListener(tempSaveBtn, 'click', (e) => {
                 e.preventDefault();
                 this.tempSaveRecord();
             });
@@ -131,103 +142,213 @@ export class NewRecordPage {
     }
 
     /**
-     * 初始化滾動
+     * 載入子介面
+     * @param {number} type - 0=支出, 1=收入, 2=轉帳
      */
-    initScroll() {
-        const recordMain = document.getElementById('record-main');
-        const recordForm = document.getElementById('record-form');
-        const recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
+    async loadSubInterface(type) {
+        if (!this.recordMain) return;
 
-        if (!recordMain || !recordForm || !recordScrollbarThumb) return;
+        // 判斷滑動方向（根據類型順序：0=支出, 1=收入, 2=轉帳）
+        const oldType = this.recordType;
+        const slideDirection = type > oldType ? 'left' : 'right';
 
-        // 鼠標拖動
-        recordMain.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.form-input')) return;
-            this.isDragging = true;
-            this.startY = e.clientY;
-            this.scrollTop = parseFloat(recordForm.style.top || 0);
-            recordMain.classList.add('dragging');
-            e.preventDefault();
-        });
+        // 保存舊的表單元素
+        const oldForm = this.recordForm;
+        const oldScrollbar = this.recordScrollbarThumb ? this.recordScrollbarThumb.parentElement : null;
 
-        // 觸控拖動
-        recordMain.addEventListener('touchstart', (e) => {
-            if (e.target.closest('.form-input')) return;
-            this.isDragging = true;
-            this.startY = e.touches[0].clientY;
-            this.scrollTop = parseFloat(recordForm.style.top || 0);
-            recordMain.classList.add('dragging');
-        }, { passive: true });
+        // 清理舊的 ScrollController（但保留 DOM 用於動畫）
+        if (this.scrollController) {
+            this.scrollController.destroy();
+            this.scrollController = null;
+        }
 
-        // 移動處理
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isDragging) return;
-            const deltaY = e.clientY - this.startY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop + deltaY));
-            recordForm.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        });
+        // 重置 ID 映射
+        this.fieldIdMap = {};
 
-        document.addEventListener('touchmove', (e) => {
-            if (!this.isDragging) return;
-            const deltaY = e.touches[0].clientY - this.startY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop + deltaY));
-            recordForm.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        }, { passive: true });
+        // 根據類型生成對應的表單 HTML
+        const formHtml = this.generateFormHtml(type);
 
-        // 結束拖動
-        const endDrag = () => {
-            if (this.isDragging) {
-                this.isDragging = false;
-                recordMain.classList.remove('dragging');
-            }
-        };
+        // 創建新表單容器
+        const newFormContainer = document.createElement('div');
+        newFormContainer.style.position = 'absolute';
+        newFormContainer.style.top = '0';
+        newFormContainer.style.left = '0';
+        newFormContainer.style.width = '100%';
+        newFormContainer.style.height = '100%';
+        newFormContainer.innerHTML = `
+            <div class="record-form" id="record-form">
+                ${formHtml}
+            </div>
+            <div class="record-scrollbar">
+                <div class="record-scrollbar-thumb" id="record-scrollbar-thumb"></div>
+            </div>
+        `;
 
-        document.addEventListener('mouseup', endDrag);
-        document.addEventListener('touchend', endDrag);
+        // 確保 record-main 使用相對定位
+        this.recordMain.style.position = 'relative';
 
-        // 滾輪
-        recordMain.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop - delta));
-            recordForm.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        }, { passive: false });
+        // 如果是首次載入，直接替換內容
+        if (!oldForm) {
+            this.recordMain.innerHTML = '';
+            this.recordMain.appendChild(newFormContainer);
+            newFormContainer.style.position = 'static';
 
-        // 監聽尺寸變化
-        const observer = new ResizeObserver(() => {
-            this.updateScrollbar();
-        });
-        observer.observe(recordMain);
-        observer.observe(recordForm);
+            // 重新獲取 DOM 引用
+            this.recordForm = document.getElementById('record-form');
+            this.recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
 
-        this.updateScrollbar();
+            // 初始化滾動
+            this.initScroll();
+
+            // 初始化計算機
+            await this.initCalculator();
+            return;
+        }
+
+        // 將舊表單設為絕對定位
+        if (oldForm && oldScrollbar) {
+            const oldContainer = document.createElement('div');
+            oldContainer.style.position = 'absolute';
+            oldContainer.style.top = '0';
+            oldContainer.style.left = '0';
+            oldContainer.style.width = '100%';
+            oldContainer.style.height = '100%';
+            oldContainer.appendChild(oldForm);
+            oldContainer.appendChild(oldScrollbar);
+            this.recordMain.appendChild(oldContainer);
+
+            // 添加退出動畫
+            oldContainer.classList.add(`page-exit-slide-${slideDirection}`);
+
+            // 動畫結束後移除舊容器
+            setTimeout(() => {
+                if (oldContainer.parentElement) {
+                    oldContainer.remove();
+                }
+            }, 300);
+        }
+
+        // 添加新表單到容器
+        this.recordMain.appendChild(newFormContainer);
+
+        // 添加進入動畫
+        newFormContainer.classList.add(`page-enter-slide-${slideDirection}`);
+
+        // 動畫結束後移除動畫 class 並恢復靜態定位
+        setTimeout(() => {
+            newFormContainer.classList.remove('page-enter-slide-left', 'page-enter-slide-right');
+            newFormContainer.style.position = 'static';
+        }, 300);
+
+        // 重新獲取 DOM 引用
+        this.recordForm = newFormContainer.querySelector('.record-form');
+        this.recordScrollbarThumb = newFormContainer.querySelector('.record-scrollbar-thumb');
+
+        // 初始化滾動
+        this.initScroll();
+
+        // 初始化計算機（金額欄位）
+        await this.initCalculator();
     }
 
     /**
-     * 更新滾動條
+     * 生成唯一的欄位 ID
+     * @param {number} type - 表單類型
+     * @param {number} index - 欄位索引
+     * @param {Object} field - 欄位配置
+     * @returns {string} 唯一 ID
      */
-    updateScrollbar() {
-        const recordMain = document.getElementById('record-main');
-        const recordForm = document.getElementById('record-form');
-        const recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
+    generateFieldId(type, index, field) {
+        const id = `field-${type}-${index}`;
+        // 記錄映射關係（欄位名稱 -> ID）
+        this.fieldIdMap[field.name] = id;
+        return id;
+    }
 
-        if (!recordMain || !recordForm || !recordScrollbarThumb) return;
+    /**
+     * 根據類型生成表單 HTML
+     * @param {number} type - 0=支出, 1=收入, 2=轉帳
+     * @returns {string} 表單 HTML
+     */
+    generateFormHtml(type) {
+        const fields = this.formConfigs[type] || this.formConfigs[0];
 
-        this.contentHeight = recordForm.scrollHeight;
-        this.containerHeight = recordMain.clientHeight;
-        this.maxScroll = Math.max(0, this.contentHeight - this.containerHeight);
+        return fields.map((field, index) => {
+            const fieldId = this.generateFieldId(type, index, field);
+            const inputHtml = this.generateFieldInput(field, fieldId);
+            return `
+                <div class="form-group" style="height: 25%;">
+                    <label for="${fieldId}">${field.name}</label>
+                    ${inputHtml}
+                </div>
+            `;
+        }).join('');
+    }
 
-        if (this.maxScroll > 0) {
-            const thumbHeight = Math.max(30, (this.containerHeight / this.contentHeight) * this.containerHeight);
-            const thumbTop = (Math.abs(this.scrollTop) / this.maxScroll) * (this.containerHeight - thumbHeight);
-            recordScrollbarThumb.style.height = thumbHeight + 'px';
-            recordScrollbarThumb.style.top = thumbTop + 'px';
+    /**
+     * 根據欄位配置生成 input HTML
+     * @param {Object} field - 欄位配置 { name, type, placeholder? }
+     * @param {string} fieldId - 自動生成的唯一 ID
+     * @returns {string} input HTML
+     */
+    generateFieldInput(field, fieldId) {
+        const placeholder = field.placeholder || `請輸入${field.name}`;
+
+        switch (field.type) {
+            case 'calculator':
+                // Calculator 類型：readonly text input
+                return `<input type="text" id="${fieldId}" class="form-input" placeholder="${placeholder}" readonly />`;
+
+            case 'datetime-local':
+                // 時間類型
+                return `<input type="datetime-local" id="${fieldId}" class="form-input" />`;
+
+            case 'text':
+            default:
+                // 一般文字輸入
+                return `<input type="text" id="${fieldId}" class="form-input" placeholder="${placeholder}" />`;
+        }
+    }
+
+    /**
+     * 初始化計算機
+     */
+    async initCalculator() {
+        try {
+            const calculator = this.getComponent('calculator');
+            if (!calculator) return;
+
+            // 找到當前表單中類型為 calculator 的欄位
+            const fields = this.formConfigs[this.recordType] || this.formConfigs[0];
+            const calculatorField = fields.find(field => field.type === 'calculator');
+
+            if (calculatorField) {
+                // 從 fieldIdMap 中查找對應的 ID
+                const fieldId = this.fieldIdMap[calculatorField.name];
+                if (fieldId) {
+                    await calculator.init(fieldId);
+                    console.log(`✓ Calculator initialized for ${calculatorField.name} (${fieldId})`);
+                }
+            }
+        } catch (error) {
+            console.error('初始化計算機失敗:', error);
+        }
+    }
+
+    /**
+     * 初始化滾動
+     */
+    initScroll() {
+        if (!this.recordMain || !this.recordForm || !this.recordScrollbarThumb) return;
+
+        // 通過組件管理器創建 ScrollController 實例
+        if (this.router && this.router.componentsManager) {
+            this.scrollController = this.router.componentsManager.createComponent(
+                'scrollController',
+                this.recordMain,
+                this.recordForm,
+                this.recordScrollbarThumb
+            );
         }
     }
 
@@ -238,8 +359,8 @@ export class NewRecordPage {
         console.log('儲存記錄, 類型:', this.recordType);
         // TODO: 實作儲存邏輯
 
-        // 儲存後返回
-        this.router.back();
+        // 儲存後返回首頁
+        this.navigate('pages/home.html');
     }
 
     /**
@@ -259,9 +380,15 @@ export class NewRecordPage {
     }
 
     /**
-     * 頁面清理
+     * 頁面銷毀（cache: false 時調用）
      */
     destroy() {
-        console.log('New record page destroyed');
+        // 清理 ScrollController
+        if (this.scrollController) {
+            this.scrollController.destroy();
+            this.scrollController = null;
+        }
+
+        super.destroy();
     }
 }

@@ -3,19 +3,16 @@
  * 設定面板組件 - 處理設定面板的開關和滾動交互
  */
 export class SettingPanel {
-    constructor() {
+    constructor(preloadedHtml = null, componentsManager = null) {
         this.settingPanel = null;
         this.settingOverlay = null;
         this.settingContent = null;
         this.settingContentInner = null;
         this.scrollbarThumb = null;
-
-        this.isDragging = false;
-        this.startY = 0;
-        this.scrollTop = 0;
-        this.contentHeight = 0;
-        this.containerHeight = 0;
-        this.maxScroll = 0;
+        this.templateHtml = preloadedHtml;  // 接收預載入的 HTML
+        this.isInjected = false;  // 是否已注入 DOM
+        this.scrollController = null;  // 滾動控制器
+        this.componentsManager = componentsManager;  // 組件管理器引用
 
         this.init();
     }
@@ -24,8 +21,11 @@ export class SettingPanel {
      * 初始化組件
      */
     async init() {
-        // 載入 HTML 模板
-        await this.loadTemplate();
+        // 注入預載入的 HTML 模板
+        if (!this.isInjected && this.templateHtml) {
+            this.injectTemplate();
+            this.isInjected = true;
+        }
 
         // 獲取 DOM 元素
         this.initElements();
@@ -38,24 +38,24 @@ export class SettingPanel {
     }
 
     /**
-     * 載入 HTML 模板
+     * 注入預載入的 HTML 模板到 DOM
      */
-    async loadTemplate() {
-        try {
-            const response = await fetch('components/SettingPanel.html');
-            const html = await response.text();
-
-            // 將模板插入到 body 中
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-
-            // 將所有子元素添加到 body
-            while (tempDiv.firstChild) {
-                document.body.appendChild(tempDiv.firstChild);
-            }
-        } catch (error) {
-            console.error('載入設定面板模板失敗:', error);
+    injectTemplate() {
+        if (!this.templateHtml) {
+            console.error('SettingPanel template not preloaded');
+            return;
         }
+
+        // 將模板插入到 body 中
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.templateHtml;
+
+        // 將所有子元素添加到 body
+        while (tempDiv.firstChild) {
+            document.body.appendChild(tempDiv.firstChild);
+        }
+
+        console.log('✓ SettingPanel template injected');
     }
 
     /**
@@ -89,77 +89,11 @@ export class SettingPanel {
             });
         }
 
-        // 滾動事件
-        this.bindScrollEvents();
-
         // 設定項目點擊事件
         this.bindSettingItems();
     }
 
-    /**
-     * 綁定滾動相關事件
-     */
-    bindScrollEvents() {
-        if (!this.settingContent) return;
 
-        // 鼠標拖動
-        this.settingContent.addEventListener('mousedown', (e) => {
-            this.isDragging = true;
-            this.startY = e.clientY;
-            this.scrollTop = parseFloat(this.settingContentInner.style.top || 0);
-            this.settingContent.classList.add('dragging');
-            e.preventDefault();
-        });
-
-        // 觸控拖動
-        this.settingContent.addEventListener('touchstart', (e) => {
-            this.isDragging = true;
-            this.startY = e.touches[0].clientY;
-            this.scrollTop = parseFloat(this.settingContentInner.style.top || 0);
-            this.settingContent.classList.add('dragging');
-        }, { passive: true });
-
-        // 鼠標移動
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isDragging) return;
-            const deltaY = e.clientY - this.startY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop + deltaY));
-            this.settingContentInner.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        });
-
-        // 觸控移動
-        document.addEventListener('touchmove', (e) => {
-            if (!this.isDragging) return;
-            const deltaY = e.touches[0].clientY - this.startY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop + deltaY));
-            this.settingContentInner.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        }, { passive: true });
-
-        // 結束拖動
-        const endDrag = () => {
-            if (this.isDragging) {
-                this.isDragging = false;
-                this.settingContent.classList.remove('dragging');
-            }
-        };
-
-        document.addEventListener('mouseup', endDrag);
-        document.addEventListener('touchend', endDrag);
-
-        // 滾輪事件
-        this.settingContent.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY;
-            const newScrollTop = Math.max(-this.maxScroll, Math.min(0, this.scrollTop - delta));
-            this.settingContentInner.style.top = newScrollTop + 'px';
-            this.scrollTop = newScrollTop;
-            this.updateScrollbar();
-        }, { passive: false });
-    }
 
     /**
      * 綁定設定項目點擊事件
@@ -184,36 +118,19 @@ export class SettingPanel {
      * 初始化滾動條
      */
     initScrollbar() {
-        if (!this.settingContent || !this.settingContentInner) return;
-
-        // 使用 ResizeObserver 監聽尺寸變化
-        const observer = new ResizeObserver(() => {
-            this.updateScrollbar();
-        });
-
-        observer.observe(this.settingContent);
-        observer.observe(this.settingContentInner);
-
-        // 初始更新
-        this.updateScrollbar();
-    }
-
-    /**
-     * 更新滾動條位置和大小
-     */
-    updateScrollbar() {
-        if (!this.scrollbarThumb || !this.settingContent || !this.settingContentInner) return;
-
-        this.contentHeight = this.settingContentInner.scrollHeight;
-        this.containerHeight = this.settingContent.clientHeight;
-        this.maxScroll = Math.max(0, this.contentHeight - this.containerHeight);
-
-        if (this.maxScroll > 0) {
-            const thumbHeight = Math.max(30, (this.containerHeight / this.contentHeight) * this.containerHeight);
-            const thumbTop = (Math.abs(this.scrollTop) / this.maxScroll) * (this.containerHeight - thumbHeight);
-            this.scrollbarThumb.style.height = thumbHeight + 'px';
-            this.scrollbarThumb.style.top = thumbTop + 'px';
+        if (!this.settingContent || !this.settingContentInner || !this.scrollbarThumb) return;
+        if (!this.componentsManager) {
+            console.error('SettingPanel: componentsManager not provided');
+            return;
         }
+
+        // 通過組件管理器創建 ScrollController 實例
+        this.scrollController = this.componentsManager.createComponent(
+            'scrollController',
+            this.settingContent,
+            this.settingContentInner,
+            this.scrollbarThumb
+        );
     }
 
     /**

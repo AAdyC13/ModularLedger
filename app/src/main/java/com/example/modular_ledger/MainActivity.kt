@@ -20,9 +20,9 @@ import com.example.modular_ledger.ui.theme.Modular_ledgerTheme
 
 class MainActivity : AppCompatActivity() {
     companion object {
-    private const val USE_LOCAL_SERVER = false
+    private const val USE_LOCAL_FILE = false
     //private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
-     private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
+    private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
     private const val LOCAL_URL = "file:///android_asset/www/index.html"
 }
 
@@ -48,7 +48,7 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(true)
 
         // 根據設定載入不同來源
-        val url = if (USE_LOCAL_SERVER) LOCAL_URL else SERVER_URL
+        val url = if (USE_LOCAL_FILE) LOCAL_URL else SERVER_URL
         webView.loadUrl(url)
     }
 }

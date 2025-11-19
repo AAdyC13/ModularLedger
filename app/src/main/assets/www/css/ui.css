@@ -24,11 +24,12 @@
 .main-content {
     height: 84vh;
     flex: 1;
-    overflow-y: auto;
-    padding: var(--spacing-lg);
+    overflow: hidden;
+    padding: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
 }
 
 .bottom-menu {

@@ -1,0 +1,28 @@
+www/
+├── index.html                    # 純容器，僅載入系統 JS
+├── css/
+│   ├── theme.css                # 主題變數
+│   ├── base.css                 # 基礎樣式和動畫
+│   ├── ui.css                   # UI 組件樣式
+│   └── main.css                 # (舊文件，可刪除)
+├── js/
+│   ├── runtime.js               # 應用初始化
+│   ├── router.js                # 路由管理
+│   ├── components.js            # 組件註冊
+│   ├── bridge.js                # Android 橋接
+│   ├── app.js                   # (舊文件，保留供插件使用)
+│   └── pluginManager.js         # 插件系統
+├── pages/
+│   ├── home.html                # 首頁模板
+│   ├── home.js                  # 首頁邏輯
+│   ├── new_record.html          # 記帳頁面模板
+│   └── new_record.js            # 記帳頁面邏輯
+├── components/
+│   ├── SettingPanel.html        # 設定面板模板
+│   ├── SettingPanel.js          # 設定面板邏輯
+│   ├── Calculator.html          # 計算機模板
+│   └── Calculator.js            # 計算機邏輯
+├── utils/                       # 工具函數目錄
+└── plugins/                     # 插件系統
+    ├── darkmode/
+    └── minimal/

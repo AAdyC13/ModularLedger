@@ -1,0 +1,117 @@
+/* ==========================================
+   Animation Styles - 動畫樣式
+   Page Transitions, Component Animations
+   ========================================== */
+
+/* ==========================================
+   頁面切換動畫 - 預設 Fade
+   ========================================== */
+
+#app.page-exit-fade {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#app.page-enter-fade {
+    animation: fadeEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeEnter {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 向後兼容：保留舊的 class 名稱 */
+#app.page-exit {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#app.page-enter {
+    animation: fadeEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================
+   訂製動畫區 - Custom Animations
+   ========================================== */
+
+/* 記一筆頁面 - 從下往上滑動覆蓋 */
+.slide-up-cover {
+    animation: slideUpCover 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideUpCover {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Record Main 子介面切換動畫（支出/收入/轉帳） */
+.page-exit-slide-left {
+    animation: slideOutToLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.page-enter-slide-left {
+    animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.page-exit-slide-right {
+    animation: slideOutToRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.page-enter-slide-right {
+    animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideOutToLeft {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

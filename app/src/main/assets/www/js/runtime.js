@@ -13,31 +13,46 @@ class Runtime {
     }
 
     /**
-     * 啟動應用
+     * 啟動應用（嚴格資源控制版本）
      */
     async start() {
         try {
             console.log('🚀 Starting application...');
+            console.log('📊 Resource control mode: STRICT (zero-fetch after startup)');
 
             // 1. 檢查必要的 DOM 元素
             this.checkRequirements();
 
-            // 2. 註冊全局組件
-            console.log('📦 Registering components...');
+            // 2. 註冊全局組件（預載入所有組件 HTML）
+            console.log('📦 Preloading components...');
             await registerComponents();
 
             // 3. 初始化路由器
             console.log('🗺️ Initializing router...');
             this.router = new Router();
 
-            // 4. 載入首頁
-            console.log('🏠 Loading home page...');
-            await this.router.navigate('pages/home.html', { replace: true });
+            // 4. 注入全域組件引用到路由器
+            const { components, createComponent, getComponent } = await import('./components.js');
 
-            // 5. 標記為已初始化
+            // 創建組件管理器代理
+            const componentsManager = { createComponent, getComponent };
+
+            // 註冊到路由器（傳遞所有已註冊的單例組件）
+            this.router.registerGlobalComponents(components, componentsManager);
+
+            // 5. 預載入所有頁面（HTML 和 JS 模組）
+            console.log('📥 Preloading all pages...');
+            await this.router.preloadAllPages();
+
+            // 6. 載入首頁（從快取，零 fetch）
+            console.log('🏠 Loading home page from cache...');
+            await this.router.navigate('pages/home.html', { replace: true, skipAnimation: true });
+
+            // 7. 標記為已初始化
             this.isInitialized = true;
 
             console.log('✅ Application started successfully!');
+            console.log('🔒 All resources preloaded - 0 pending requests');
 
         } catch (error) {
             console.error('❌ Application startup failed:', error);

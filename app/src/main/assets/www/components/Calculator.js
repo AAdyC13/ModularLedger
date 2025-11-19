@@ -3,13 +3,16 @@
  * 計算機組件 - 提供數字輸入和計算功能
  */
 export class Calculator {
-    constructor() {
+    constructor(preloadedHtml = null) {
         this.panel = null;
         this.display = null;
         this.displayValue = '0';
         this.lastOperator = null;
         this.exceptionCalculated = false;
         this.targetInput = null;
+        this.templateHtml = preloadedHtml;  // 接收預載入的 HTML
+        this.isInjected = false;  // 是否已注入 DOM
+        this.boundHandlers = {};  // 存儲綁定的處理函數，用於解綁
     }
 
     /**
@@ -17,8 +20,14 @@ export class Calculator {
      * @param {string} targetInputId - 目標輸入框 ID
      */
     async init(targetInputId) {
-        // 載入 HTML 模板
-        await this.loadTemplate();
+        // 只在首次注入 DOM（永遠不 fetch）
+        if (!this.isInjected && this.templateHtml) {
+            this.injectTemplate();
+            this.isInjected = true;
+        }
+
+        // 解綁舊的事件（避免重複綁定）
+        this.unbindEvents();
 
         this.targetInput = document.getElementById(targetInputId);
         this.panel = document.getElementById('calculator-panel');
@@ -33,68 +42,92 @@ export class Calculator {
     }
 
     /**
-     * 載入 HTML 模板
+     * 注入預載入的 HTML 模板到 DOM
      */
-    async loadTemplate() {
-        try {
-            const response = await fetch('../components/Calculator.html');
-            const html = await response.text();
-
-            // 插入到 body
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-
-            while (tempDiv.firstChild) {
-                document.body.appendChild(tempDiv.firstChild);
-            }
-        } catch (error) {
-            console.error('載入計算機模板失敗:', error);
+    injectTemplate() {
+        if (!this.templateHtml) {
+            console.error('Calculator template not preloaded');
+            return;
         }
+
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.templateHtml;
+
+        while (tempDiv.firstChild) {
+            document.body.appendChild(tempDiv.firstChild);
+        }
+
+        console.log('✓ Calculator template injected');
     }
 
     /**
      * 綁定事件
      */
     bindEvents() {
-        // 顯示/隱藏計算機
-        this.targetInput.addEventListener('click', (e) => {
+        // 存儲處理函數引用以便後續解綁
+        this.boundHandlers.inputClick = (e) => {
             e.stopPropagation();
             this.show();
-        });
+        };
 
-        // 點擊其他地方關閉
-        document.addEventListener('click', (e) => {
+        this.boundHandlers.documentClick = (e) => {
             this.exceptionCalculated = false;
             if (!this.panel.contains(e.target) && e.target !== this.targetInput) {
                 this.hide();
             }
-        });
+        };
 
-        // 計算機按鈕
-        document.querySelectorAll('.calc-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (btn.disabled) return;
+        // 顯示/隱藏計算機
+        this.targetInput.addEventListener('click', this.boundHandlers.inputClick);
 
-                const value = btn.dataset.value;
+        // 點擊其他地方關閉
+        document.addEventListener('click', this.boundHandlers.documentClick);
 
-                if (value >= '0' && value <= '9') {
-                    this.handleNumber(value);
-                } else if (value === '.') {
-                    this.handleDecimal();
-                } else if (value === 'C') {
-                    this.handleClear();
-                } else if (value === 'del') {
-                    this.handleBackspace();
-                } else if (['+', '-', '*', '/'].includes(value)) {
-                    this.handleOperator(value);
-                } else if (value === '=') {
-                    this.handleEquals();
-                }
+        // 計算機按鈕（只綁定一次到 panel，使用事件委託）
+        this.boundHandlers.panelClick = (e) => {
+            const btn = e.target.closest('.calc-btn');
+            if (!btn || btn.disabled) return;
 
-                this.updateButtonStates();
-            });
-        });
+            e.stopPropagation();
+            const value = btn.dataset.value;
+
+            if (value >= '0' && value <= '9') {
+                this.handleNumber(value);
+            } else if (value === '.') {
+                this.handleDecimal();
+            } else if (value === 'C') {
+                this.handleClear();
+            } else if (value === 'del') {
+                this.handleBackspace();
+            } else if (['+', '-', '*', '/'].includes(value)) {
+                this.handleOperator(value);
+            } else if (value === '=') {
+                this.handleEquals();
+            }
+
+            this.updateButtonStates();
+        };
+
+        this.panel.addEventListener('click', this.boundHandlers.panelClick);
+    }
+
+    /**
+     * 解綁事件
+     */
+    unbindEvents() {
+        if (this.targetInput && this.boundHandlers.inputClick) {
+            this.targetInput.removeEventListener('click', this.boundHandlers.inputClick);
+        }
+
+        if (this.boundHandlers.documentClick) {
+            document.removeEventListener('click', this.boundHandlers.documentClick);
+        }
+
+        if (this.panel && this.boundHandlers.panelClick) {
+            this.panel.removeEventListener('click', this.boundHandlers.panelClick);
+        }
+
+        this.boundHandlers = {};
     }
 
     show() {
@@ -299,9 +332,4 @@ export class Calculator {
         this.display.textContent = this.displayValue;
         this.updateButtonStates();
     }
-}
-
-// 為了向後兼容，將 Calculator 掛載到 window
-if (typeof window !== 'undefined') {
-    window.Calculator = new Calculator();
 }
