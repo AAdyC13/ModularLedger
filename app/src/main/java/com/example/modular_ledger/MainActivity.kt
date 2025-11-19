@@ -2,6 +2,9 @@ package com.example.modular_ledger
 
 import android.app.Application
 import android.os.Bundle
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -26,20 +30,40 @@ import java.text.SimpleDateFormat
 import java.util.Date // <-- 確保 java.util.Date 已匯入
 import java.util.Locale
 
-class MainActivity : ComponentActivity() {
+
+
+class MainActivity : AppCompatActivity() {
+    companion object {
+    private const val USE_LOCAL_SERVER = false
+    //private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
+     private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
+    private const val LOCAL_URL = "file:///android_asset/www/index.html"
+}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
-            Modular_ledgerTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    ExpenseTestScreen()
-                }
+        val webView = WebView(this)
+        setContentView(webView)
+
+        webView.settings.apply {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        }
+
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+                view?.loadUrl(url ?: "")
+                return true
             }
         }
+
+        WebView.setWebContentsDebuggingEnabled(true)
+
+        // 根據設定載入不同來源
+        val url = if (USE_LOCAL_SERVER) LOCAL_URL else SERVER_URL
+        webView.loadUrl(url)
     }
 }
 
