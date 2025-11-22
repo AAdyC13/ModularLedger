@@ -1,0 +1,47 @@
+.record-footer {
+    height: 10vh;
+}
+
+.record-main {
+    overflow: hidden;
+    padding: 0;
+    display: block;
+    align-items: flex-start;
+    justify-content: flex-start;
+    position: relative;
+    cursor: grab;
+}
+
+.record-main.dragging {
+    cursor: grabbing;
+}
+
+.record-form {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 8px;
+    padding: var(--spacing-lg);
+}
+
+.record-scrollbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 100%;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.record-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    background: var(--text-secondary);
+    border-radius: 4px;
+    pointer-events: none;
+    transition: background 0.2s ease;
+}

@@ -34,14 +34,36 @@ export class HomePage extends BasePage {
      * 綁定菜單按鈕事件
      */
     bindMenuButtons() {
+        const menuBtns = document.querySelectorAll('.top-menu .menu-btn');
+
+        // 日曆按鈕
+        if (menuBtns[0]) {
+            this.addEventListener(menuBtns[0], 'click', (e) => {
+                e.preventDefault();
+                if (this.recordCalendar) {
+                    this.recordCalendar.switchView('calendar');
+                    this.setActiveMenuButton(menuBtns[0]);
+                }
+            });
+        }
+
+        // 清單按鈕
+        if (menuBtns[1]) {
+            this.addEventListener(menuBtns[1], 'click', (e) => {
+                e.preventDefault();
+                if (this.recordCalendar) {
+                    this.recordCalendar.switchView('list');
+                    this.setActiveMenuButton(menuBtns[1]);
+                }
+            });
+        }
+
         // 設定按鈕
         const settingBtn = document.getElementById('setting-btn');
         if (settingBtn) {
             this.addEventListener(settingBtn, 'click', (e) => {
                 e.preventDefault();
-                if (this.settingPanel) {
-                    this.settingPanel.open();
-                }
+                this.navigate('pages/setting.html');
             });
         }
 
@@ -55,15 +77,33 @@ export class HomePage extends BasePage {
         }
 
         // 其他按鈕
-        const menuBtns = document.querySelectorAll('.menu-btn');
         menuBtns.forEach(btn => {
-            if (btn.id !== 'setting-btn' && btn.id !== 'new-record-btn') {
+            if (btn.id !== 'setting-btn' && btn.id !== 'new-record-btn' &&
+                btn.textContent !== '日曆' && btn.textContent !== '清單') {
                 this.addEventListener(btn, 'click', (e) => {
                     e.preventDefault();
                     console.log('按鈕點擊:', btn.textContent);
                 });
             }
         });
+
+        // 預設激活日曆按鈕
+        if (menuBtns[0]) {
+            this.setActiveMenuButton(menuBtns[0]);
+        }
+    }
+
+    /**
+     * 設置激活的菜單按鈕
+     */
+    setActiveMenuButton(activeBtn) {
+        const menuBtns = document.querySelectorAll('.top-menu .menu-btn');
+        menuBtns.forEach(btn => {
+            if (btn.textContent === '日曆' || btn.textContent === '清單') {
+                btn.classList.remove('active');
+            }
+        });
+        activeBtn.classList.add('active');
     }
 
     /**

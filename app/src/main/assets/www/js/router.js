@@ -265,7 +265,7 @@ export class Router {
         }
 
         // 檢查常見的頁面類別名稱
-        const classNames = ['HomePage', 'NewRecordPage'];
+        const classNames = ['HomePage', 'NewRecordPage', 'SettingPage'];
         for (const name of classNames) {
             if (module[name]) {
                 return module[name];
@@ -361,7 +361,7 @@ export class Router {
      * @param {object} componentsManager - 組件管理器 { createComponent, getComponent }
      */
     registerGlobalComponents(components, componentsManager = null) {
-        
+
         this.globalComponents = components;
         this.componentsManager = componentsManager;
         console.log('✓ Global components registered to router');

@@ -2,7 +2,6 @@
  * Android Bridge - WebView 與 Android 原生通訊
  * 提供統一的接口與 Android 原生層交互
  */
-
 class AndroidBridge {
     constructor() {
         this.isAndroid = this.detectAndroid();

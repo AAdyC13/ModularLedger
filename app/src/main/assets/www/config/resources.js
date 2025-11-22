@@ -54,6 +54,13 @@ export const PAGES = [
         html: 'pages/new_record.html',
         js: 'pages/new_record.js',
         cache: false  // 不快取，每次重新初始化
+    },
+    {
+        name: 'setting',
+        className: 'SettingPage',
+        html: 'pages/setting.html',
+        js: 'pages/setting.js',
+        cache: true  // 快取頁面，保留狀態
     }
 ];
 

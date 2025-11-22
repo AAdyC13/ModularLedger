@@ -1,10 +1,12 @@
-<!-- 左側容器：日曆主體 -->
+<!-- 月份選擇器（日曆和清單共用） -->
+<div class="month-selector">
+    <button class="month-nav-btn" id="prev-month-btn">&lt;</button>
+    <h2 class="current-month" id="current-month">2024年11月</h2>
+    <button class="month-nav-btn" id="next-month-btn">&gt;</button>
+</div>
+
+<!-- 日曆容器 -->
 <div class="calendar-container">
-    <div class="calendar-header">
-        <button class="month-nav-btn" id="prev-month-btn">&lt;</button>
-        <h2 class="current-month" id="current-month">2024年11月</h2>
-        <button class="month-nav-btn" id="next-month-btn">&gt;</button>
-    </div>
     <div class="calendar-weekdays">
         <div class="weekday">日</div>
         <div class="weekday">一</div>
@@ -22,7 +24,7 @@
 <!-- 分隔線 -->
 <div class="calendar-divider"></div>
 
-<!-- 右側容器：當日紀錄 -->
+<!-- 記錄容器：當日紀錄 / 月份清單 -->
 <div class="records-container">
     <div class="records-header">
         <h3 id="selected-date">請選擇日期</h3>

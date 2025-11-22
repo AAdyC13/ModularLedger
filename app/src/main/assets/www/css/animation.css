@@ -1,6 +1,5 @@
 /* ==========================================
-   Animation Styles - 動畫樣式
-   Page Transitions, Component Animations
+   動畫樣式
    ========================================== */
 
 /* ==========================================
@@ -113,5 +112,41 @@
     to {
         transform: translateX(0);
         opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInFromBottom {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToBottom {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateY(100%);
+        opacity: 0;
     }
 }
