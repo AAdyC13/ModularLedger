@@ -86,6 +86,27 @@ class AndroidBridge {
             this.callbacks.delete(callbackId);
         }
     }
+    /**
+     * 執行 SQL 指令 (CREATE, INSERT, UPDATE, DELETE)
+     * @param {string} sql - SQL 語句
+     * @param {Array} args - 參數陣列 (可選)
+     */
+    async execSQL(sql, args = []) {
+        // 實際開發時建議動態傳入 pluginId
+        const pluginId = "com.example.plugin.default"; 
+        return this.call('execSQL', { sql, args, pluginId });
+    }
+
+    /**
+     * 執行 SQL 查詢 (SELECT)
+     * @param {string} sql - SQL 語句
+     * @param {Array} args - 參數陣列 (可選)
+     * @returns {Promise<Array>} - 返回查詢結果陣列
+     */
+    async query(sql, args = []) {
+        const pluginId = "com.example.plugin.default";
+        return this.call('sqlQuery', { sql, args, pluginId });
+    }
 
     /**
      * 顯示 Toast 消息

@@ -6,9 +6,10 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.modular_ledger.data.AppDatabase
-import com.example.modular_ledger.data.Expense
-import com.example.modular_ledger.data.ExpenseRepository
+import com.example.modular_ledger.data.source.local.AppDatabase
+import com.example.modular_ledger.data.model.Expense
+import com.example.modular_ledger.data.repository.ExpenseRepository
+
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import java.util.Calendar

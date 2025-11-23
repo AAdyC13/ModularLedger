@@ -27,8 +27,10 @@ import com.example.modular_ledger.ui.theme.Modular_ledgerTheme
 import com.example.modular_ledger.viewmodel.ExpenseViewModel
 import com.example.modular_ledger.viewmodel.ExpenseViewModelFactory
 import java.text.SimpleDateFormat
-import java.util.Date // <-- 確保 java.util.Date 已匯入
+import java.util.Date
 import java.util.Locale
+import com.example.modular_ledger.data.source.local.AppDatabase // 新增
+import com.example.modular_ledger.data.controller.RawSqlController // 新增
 
 
 
