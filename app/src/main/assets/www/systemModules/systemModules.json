@@ -1,0 +1,10 @@
+[
+	{
+		"moduleName": "homePage",
+		"entryJS": "home.js"
+	},
+	{
+		"moduleName": "new_record",
+		"entryJS": "js/new_record.js"
+	}
+]
