@@ -11,6 +11,10 @@ import androidx.compose.runtime.getValue
 import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
 
+// For logging
+import android.util.Log
+
+
 class MainActivity : AppCompatActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
 
@@ -22,10 +26,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled(true)
-
+        
         val webView = WebView(this)
-        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
-        webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
 
         // WebView 基本設定
         val settings = webView.settings
@@ -55,10 +57,12 @@ class MainActivity : AppCompatActivity() {
                             // 可在這裡包一層 header (例如加入 CSP)
                             return addSecurityHeaders(response)
                         }
+                        Log.d("1", "onCreate called")
 
                         // 2) 其他請求（外部） → 根據策略允許或阻擋
                         // return super.shouldInterceptRequest(view, request)
                         return WebResourceResponse(
+
                                 "text/plain",
                                 "UTF-8",
                                 403,
@@ -82,8 +86,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+        webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
         setContentView(webView)
+        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
     }
+    
     private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {
         // 如果你要加入 CSP header 或其他自訂 header，可建立新的 WebResourceResponse 並包入 headers
         val mimeType = orig.mimeType ?: "text/plain"
