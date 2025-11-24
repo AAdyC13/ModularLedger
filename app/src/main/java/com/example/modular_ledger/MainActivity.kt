@@ -27,8 +27,6 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
         webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
 
-        setContentView(webView)
-
         // WebView 基本設定
         val settings = webView.settings
         settings.javaScriptEnabled = true
@@ -84,6 +82,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+        setContentView(webView)
     }
     private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {
         // 如果你要加入 CSP header 或其他自訂 header，可建立新的 WebResourceResponse 並包入 headers
