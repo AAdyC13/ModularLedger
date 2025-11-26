@@ -1,89 +1,57 @@
+import { createLogger } from './logger.js';
 /**
- * Android Bridge - WebView 與 Android 原生通訊
- * 提供統一的接口與 Android 原生層交互
+ * Android Bridge - WebView 統一的接口與 Android 原生層交互
  */
-
 class AndroidBridge {
     constructor() {
         this.isAndroid = this.detectAndroid();
-        this.messageQueue = [];
-        this.callbacks = new Map();
-        this.callbackId = 0;
+        this.logger = createLogger('AndroidBridge');
     }
 
     /**
      * 檢測是否在 Android WebView 環境中
      */
     detectAndroid() {
-        return typeof Android !== 'undefined';
+        return typeof window.AndroidBridge !== 'undefined';
     }
 
     /**
-     * 調用 Android 原生方法
+     * 調用 Android 原生方法（同步）
      * @param {string} method - 方法名
-     * @param {object} params - 參數
-     * @returns {Promise} - 返回 Promise
+     * @param {...any} args - 參數
+     * @returns {any} - 返回結果
      */
-    call(method, params = {}) {
-        return new Promise((resolve, reject) => {
-            if (!this.isAndroid) {
-                console.warn(`[Bridge] Not in Android environment, method: ${method}`);
-                resolve(null);
-                return;
+    callSync(method, ...args) {
+        if (!this.isAndroid) {
+            console.warn(`[Bridge] Not in Android environment, method: ${method}`);
+            return null;
+        }
+
+        try {
+            if (typeof window.AndroidBridge[method] === 'function') {
+                const result = window.AndroidBridge[method](...args);
+                return result;
+            } else {
+                console.error(`[Bridge] Method ${method} not found in AndroidBridge`);
+                return null;
             }
-
-            try {
-                // 生成回調 ID
-                const callbackId = this.callbackId++;
-
-                // 存儲回調
-                this.callbacks.set(callbackId, { resolve, reject });
-
-                // 構建消息
-                const message = {
-                    id: callbackId,
-                    method: method,
-                    params: params
-                };
-
-                // 調用 Android 方法
-                if (Android[method]) {
-                    const result = Android[method](JSON.stringify(message));
-
-                    // 如果是同步返回
-                    if (result !== undefined) {
-                        resolve(JSON.parse(result));
-                        this.callbacks.delete(callbackId);
-                    }
-                } else {
-                    reject(new Error(`Method ${method} not found in Android`));
-                    this.callbacks.delete(callbackId);
-                }
-            } catch (error) {
-                reject(error);
-            }
-        });
+        } catch (error) {
+            console.error(`[Bridge] Error calling ${method}:`, error);
+            return null;
+        }
     }
 
     /**
-     * Android 調用此方法返回結果
-     * @param {string} callbackId - 回調 ID
-     * @param {string} result - 結果 JSON 字符串
+     * 獲取測試 JSON 數據
+     * @returns {object|null} - 解析後的 JSON 對象
      */
-    handleCallback(callbackId, result) {
-        const callback = this.callbacks.get(callbackId);
-        if (callback) {
-            try {
-                const data = JSON.parse(result);
-                if (data.error) {
-                    callback.reject(new Error(data.error));
-                } else {
-                    callback.resolve(data);
-                }
-            } catch (error) {
-                callback.reject(error);
-            }
-            this.callbacks.delete(callbackId);
+    getTestJson() {
+        try {
+            const jsonString = this.callSync('getTestJson');
+            return jsonString ? JSON.parse(jsonString) : null;
+        } catch (error) {
+            console.error('[Bridge] Error parsing JSON:', error);
+            return null;
         }
     }
     /**
@@ -112,15 +80,22 @@ class AndroidBridge {
      * 顯示 Toast 消息
      * @param {string} message - 消息內容
      */
-    async showToast(message) {
-        return this.call('showToast', { message });
+    showToast(message) {
+        return this.callSync('showToast', message);
     }
 
     /**
      * 獲取設備信息
+     * @returns {object|null} - 設備信息對象
      */
-    async getDeviceInfo() {
-        return this.call('getDeviceInfo');
+    getDeviceInfo() {
+        try {
+            const infoString = this.callSync('getDeviceInfo');
+            return infoString ? JSON.parse(infoString) : null;
+        } catch (error) {
+            console.error('[Bridge] Error parsing device info:', error);
+            return null;
+        }
     }
 
     /**
@@ -128,79 +103,86 @@ class AndroidBridge {
      * @param {string} key - 鍵
      * @param {any} value - 值
      */
-    async saveData(key, value) {
-        return this.call('saveData', { key, value: JSON.stringify(value) });
+    saveData(key, value) {
+        return this.callSync('saveData', key, JSON.stringify(value));
     }
 
     /**
      * 從本地存儲讀取數據
      * @param {string} key - 鍵
+     * @returns {any|null} - 讀取的數據
      */
-    async loadData(key) {
-        const result = await this.call('loadData', { key });
-        return result ? JSON.parse(result.value) : null;
+    loadData(key) {
+        try {
+            const dataString = this.callSync('loadData', key);
+            return dataString ? JSON.parse(dataString) : null;
+        } catch (error) {
+            console.error('[Bridge] Error parsing loaded data:', error);
+            return null;
+        }
     }
 
     /**
      * 請求權限
      * @param {string} permission - 權限名稱
      */
-    async requestPermission(permission) {
-        return this.call('requestPermission', { permission });
+    requestPermission(permission) {
+        return this.callSync('requestPermission', permission);
     }
 
     /**
      * 打開系統設置
      */
-    async openSettings() {
-        return this.call('openSettings');
+    openSettings() {
+        return this.callSync('openSettings');
     }
 
     /**
      * 分享內容
-     * @param {object} content - 分享內容
+     * @param {string} text - 分享文本
+     * @param {string} title - 分享標題
      */
-    async share(content) {
-        return this.call('share', content);
+    share(text, title = '分享') {
+        return this.callSync('share', text, title);
     }
 
     /**
      * 獲取應用版本
+     * @returns {string|null} - 版本號
      */
-    async getAppVersion() {
-        return this.call('getAppVersion');
+    getAppVersion() {
+        return this.callSync('getAppVersion');
     }
 
     /**
      * 檢查網絡狀態
+     * @returns {boolean|null} - 是否有網絡連接
      */
-    async checkNetworkStatus() {
-        return this.call('checkNetworkStatus');
+    checkNetworkStatus() {
+        return this.callSync('checkNetworkStatus');
     }
 
     /**
      * 打開外部瀏覽器
      * @param {string} url - URL
      */
-    async openExternalBrowser(url) {
-        return this.call('openExternalBrowser', { url });
+    openExternalBrowser(url) {
+        return this.callSync('openExternalBrowser', url);
     }
 
     /**
      * 退出應用
      */
-    async exitApp() {
-        return this.call('exitApp');
+    exitApp() {
+        return this.callSync('exitApp');
     }
 }
 
 // 創建全局 bridge 實例
 const bridge = new AndroidBridge();
 
-// 將 handleCallback 暴露到全局作用域，供 Android 調用
-window.handleAndroidCallback = (callbackId, result) => {
-    bridge.handleCallback(callbackId, result);
-};
+// 同時掛載到 window 供非模組環境使用
+window.bridge = bridge;
 
 // 導出 bridge 實例
 export default bridge;

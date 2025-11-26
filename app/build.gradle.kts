@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.webkit:webkit:1.8.0")
     //MainActivity 需要 androidx.appcompat 套件
     implementation(libs.appcompat)
 

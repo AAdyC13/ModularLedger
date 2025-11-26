@@ -1,46 +1,81 @@
 /**
- * Runtime - 應用運行時
- * 處理應用的初始化和生命週期管理
+ * Runtime - 初始化和生命週期管理
  */
 
-import { Router } from './router.js';
-import { registerComponents } from './components.js';
+// import { Router } from './router.js';
+// import { registerComponents } from './components.js';
+import { createLogger } from './logger.js';
+import bridge from './bridge.js';
 
 class Runtime {
     constructor() {
         this.router = null;
         this.isInitialized = false;
+        this.bridge = bridge;
+        this.logger = createLogger('Runtime');
+        this.systemModules = {};
+
+
     }
 
     /**
-     * 啟動應用
+     * 啟動應用（嚴格資源控制版本）
      */
     async start() {
         try {
-            console.log('🚀 Starting application...');
+            this.logger.info('Starting application');
 
             // 1. 檢查必要的 DOM 元素
             this.checkRequirements();
 
-            // 2. 註冊全局組件
-            console.log('📦 Registering components...');
-            await registerComponents();
+            this.systemModules = JSON.parse(window.AndroidBridge.getSystemModulesManifest());
+            this.logger.info("systemModules:" + JSON.stringify(this.systemModules));
 
-            // 3. 初始化路由器
-            console.log('🗺️ Initializing router...');
-            this.router = new Router();
+            // 動態載入所有系統模組的進入點 JS
+            for (const module of this.systemModules) {
+                const entryJSPath = `../systemModules/${module.moduleName}/${module.entryJS}`;
+                this.logger.info(`Loading module from: ${module.moduleName}.${module.entryJS}`);
+                try {
+                    await import(entryJSPath);
+                    this.logger.info(`Module ${module.moduleName} loaded successfully`);
+                } catch (error) {
+                    this.logger.error(`Failed to load module ${module.moduleName}: ${error}`);
+                }
+            }
 
-            // 4. 載入首頁
-            console.log('🏠 Loading home page...');
-            await this.router.navigate('pages/home.html', { replace: true });
+            // // 2. 註冊全局組件(預載入所有組件 HTML)
+            // this.logger.info('Preloading components...');
+            // await registerComponents();
 
-            // 5. 標記為已初始化
+            // // 3. 初始化路由器
+            // this.logger.info('Initializing router...');
+            // this.router = new Router();
+
+            // // 4. 注入全域組件引用到路由器
+            // const { components, createComponent, getComponent } = await import('./components.js');
+
+            // // 創建組件管理器代理
+            // const componentsManager = { createComponent, getComponent };
+
+            // // 註冊到路由器（傳遞所有已註冊的單例組件）
+            // this.router.registerGlobalComponents(components, componentsManager);
+
+            // // 5. 預載入所有頁面（HTML 和 JS 模組）
+            // this.logger.info('Preloading all pages...');
+            // await this.router.preloadAllPages();
+
+            // // 6. 載入首頁
+            // this.logger.info('Loading home page from cache...');
+            // await this.router.navigate('pages/home.html', { replace: true, skipAnimation: true });
+
+            // 7. 標記為已初始化
             this.isInitialized = true;
 
-            console.log('✅ Application started successfully!');
+            this.logger.info('Application started successfully!');
 
         } catch (error) {
-            console.error('❌ Application startup failed:', error);
+            this.logger.error(`Application startup failed: ${error}`);
+
             this.handleStartupError(error);
         }
     }

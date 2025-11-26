@@ -1,12 +1,11 @@
 package com.example.modular_ledger
 
-import android.app.Application
 import android.os.Bundle
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,114 +29,107 @@ import java.util.Date
 import java.util.Locale
 import com.example.modular_ledger.data.source.local.AppDatabase
 import com.example.modular_ledger.data.controller.RawSqlController
+import androidx.webkit.WebViewAssetLoader
+import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var assetLoader: WebViewAssetLoader
+
     companion object {
-        private const val USE_LOCAL_SERVER = true
-        
-        // private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
-        private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
-        private const val LOCAL_URL = "file:///android_asset/www/index.html"
+        private const val SERVER_URL = "http://163.18.29.38:3000/" // 實體裝置用
+        private const val LOCAL_URL = "https://appassets.androidplatform.net/assets/www/index.html"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val webView = WebView(this)
-        setContentView(webView)
-
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
-        }
-
-        // 取得資料庫實體
-        val db = AppDatabase.getDatabase(applicationContext)
-        
-        // 初始化 Controller
-        val rawSqlController = RawSqlController(db)
-        
-        // 初始化 Bridge Interface，並將 "Android" 注入到 JS 全域物件
-        val webAppInterface = WebAppInterface(this, webView, rawSqlController)
-        webView.addJavascriptInterface(webAppInterface, "Android")
-        // ---------------------------------------------------
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                view?.loadUrl(url ?: "")
-                return true
-            }
-        }
-
         WebView.setWebContentsDebuggingEnabled(true)
+        
+        val webView = WebView(this)
 
-        // 根據設定載入不同來源
-        val url = if (USE_LOCAL_SERVER) LOCAL_URL else SERVER_URL
-        webView.loadUrl(url)
-    }
-}
+        // WebView 基本設定
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = false // 不要開 file:// 讀取
+        settings.allowContentAccess = false
+        settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
 
-@Composable
-fun ExpenseTestScreen(modifier: Modifier = Modifier) {
-    // 取得 Application Context
-    val application = LocalContext.current.applicationContext as Application
+        // 建立 AssetLoader
+        assetLoader =
+                WebViewAssetLoader.Builder()
+                        .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+                        .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(this))
+                        .build()
 
-    // 使用建立的工廠 (Factory) 來初始化 ViewModel
-    val viewModel: ExpenseViewModel = viewModel(
-        factory = ExpenseViewModelFactory(application)
-    )
+        webView.webViewClient =
+                object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        // 1) 先讓 assetLoader 嘗試處理
+                        val response = assetLoader.shouldInterceptRequest(request.url)
+                        if (response != null) {
+                            // 可在這裡包一層 header (例如加入 CSP)
+                            return addSecurityHeaders(response)
+                        }
 
-    // 訂閱 (Collect) allExpenses 這個 Flow
-    val expenses by viewModel.allExpenses.collectAsState(initial = emptyList())
+                        // 2) 其他請求（外部） → 根據策略允許或阻擋
+                        // return super.shouldInterceptRequest(view, request)
+                        return WebResourceResponse(
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "API 測試畫面",
-            style = MaterialTheme.typography.headlineMedium
-        )
+                                "text/plain",
+                                "UTF-8",
+                                403,
+                                "Forbidden",
+                                null,
+                                null
+                        )
+                    }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // 測試 API (Create) 的按鈕
-        Button(onClick = {
-            // 呼叫 ViewModel 的 API
-            viewModel.addExpense(
-                amount = (100..1000).random().toDouble(), // 隨機金額
-                description = "這是一筆測試資料",
-                dateToSave = Date()
-            )
-        }) {
-            Text("新增一筆測試資料")
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // 顯示 API (Read) 的資料列表
-        LazyColumn(modifier = Modifier.fillMaxWidth()) {
-            items(items = expenses, key = { it.id }) { expense ->
-                val formattedAmount = String.format(Locale.getDefault(), "%.2f", expense.amount)
-                val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                val formattedDate = try {
-                    val d = Date(expense.timestamp * 1000)
-                    sdf.format(d)
-                } catch (e: Exception) {
-                    ""
+                    override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest
+                    ): Boolean {
+                        val url = request.url.toString()
+                        // 嚴格控制導航：阻擋跳出 app 的外部連結（或提示使用外部瀏覽器）
+                        if (isAllowedExternalUrl(url)) {
+                            return false
+                        } else {
+                            // 攔截掉或顯示對話框
+                            return true
+                        }
+                    }
                 }
 
-                Text(
-                    text = "ID: ${expense.id} | 金額: $formattedAmount | 描述: ${expense.description}" +
-                            if (formattedDate.isNotEmpty()) " | 時間: $formattedDate" else "",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                )
-            }
-        }
+        webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
+        setContentView(webView)
+        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
+    }
+    
+    private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {
+        // 如果你要加入 CSP header 或其他自訂 header，可建立新的 WebResourceResponse 並包入 headers
+        val mimeType = orig.mimeType ?: "text/plain"
+        val encoding = orig.encoding ?: "utf-8"
+        val inputStream = orig.data ?: ByteArrayInputStream(ByteArray(0))
+
+        // 範例 CSP：只允許同 origin 的資源與指定域名（依實際需求調整）
+        val headers = HashMap<String, String>()
+        headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self';"
+        headers["X-Frame-Options"] = "DENY"
+
+        return WebResourceResponse(
+                mimeType,
+                encoding, /*statusCode*/
+                200, /*reasonPhrase*/
+                "OK",
+                headers,
+                inputStream
+        )
+    }
+
+    private fun isAllowedExternalUrl(url: String): Boolean {
+        // 例如只允許特定 API 網域，或使用 external browser
+        return url.startsWith("https://www.example.com")
     }
 }

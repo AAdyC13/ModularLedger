@@ -1,9 +1,9 @@
 <!-- 上方功能菜單區 -->
 <header class="top-menu">
     <nav class="menu-container">
-        <button class="menu-btn">日曆</button>
+        <button class="menu-btn" id="calendar-btn">日曆</button>
         <div class="menu-divider"></div>
-        <button class="menu-btn">清單</button>
+        <button class="menu-btn" id="list-btn">清單</button>
         <div class="menu-divider"></div>
         <button class="menu-btn">功能3</button>
         <div class="menu-divider"></div>
@@ -14,11 +14,8 @@
 </header>
 
 <!-- 中間主要顯示區塊 -->
-<main class="main-content">
-    <div class="content-container">
-        <h2>主要內容區</h2>
-        <p>這裡是主要顯示內容的區域</p>
-    </div>
+<main class="main-content home-calendar-view" id="main-content">
+    <!-- RecordCalendar 組件將在此渲染 -->
 </main>
 
 <!-- 下方功能菜單區 -->

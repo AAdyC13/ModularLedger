@@ -1,0 +1,144 @@
+.close-btn {
+	width: 40px;
+	height: 40px;
+	border: none;
+	background: transparent;
+	font-size: 32px;
+	color: var(--text-primary);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+	line-height: 1;
+}
+
+.close-btn:hover {
+	background: var(--bg-primary);
+	border-radius: 50%;
+}
+
+.close-btn:active {
+	background: var(--text-light);
+}
+
+.setting-option-btn {
+	width: 100%;
+	padding: var(--spacing-lg);
+	background: var(--bg-card);
+	border: 1px solid var(--text-secondary);
+	border-radius: var(--radius-sm);
+	color: var(--text-primary);
+	font-size: 16px;
+	font-weight: 500;
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	box-shadow: var(--neu-shadow-small);
+}
+
+.setting-option-btn:hover {
+	background: var(--bg-primary);
+	transform: translateY(-2px);
+	box-shadow: var(--neu-shadow);
+}
+
+.setting-option-btn:active {
+	transform: translateY(0);
+	box-shadow: var(--neu-shadow-inset);
+}
+
+.setting-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: var(--spacing-lg);
+	border-bottom: 1px solid var(--text-secondary);
+}
+
+.setting-header h2 {
+	margin: 0;
+	font-size: 24px;
+	color: var(--text-primary);
+}
+
+.setting-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	z-index: 9998;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.3s ease;
+}
+
+.setting-overlay.active {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.setting-panel {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	width: 70%;
+	height: 60%;
+	background: var(--bg-card);
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	border-radius: 12px;
+	border: 1px solid var(--text-secondary);
+	box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.15);
+	transform-origin: top right;
+	transform: scale(0);
+	opacity: 0;
+	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.setting-panel.active {
+	transform: scale(1);
+	opacity: 1;
+}
+
+.setting-content {
+	flex: 1;
+	padding: 0;
+	overflow: hidden;
+	position: relative;
+	cursor: grab;
+	border-radius: 0 0 12px 12px;
+}
+
+.setting-content.dragging {
+	cursor: grabbing;
+}
+.setting-item {
+	width: 100%;
+	padding: var(--spacing-lg);
+	background: transparent;
+	border: none;
+	color: var(--text-primary);
+	font-size: 16px;
+	text-align: left;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+}
+
+.setting-item:hover {
+	background: var(--bg-primary);
+}
+
+.setting-item:active {
+	background: var(--text-light);
+}
+.setting-divider {
+	width: 100%;
+	height: 1px;
+	background: var(--text-secondary);
+}
