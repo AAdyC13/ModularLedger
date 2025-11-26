@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,18 +28,17 @@ import com.example.modular_ledger.viewmodel.ExpenseViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.modular_ledger.data.source.local.AppDatabase // 新增
-import com.example.modular_ledger.data.controller.RawSqlController // 新增
-
-
+import com.example.modular_ledger.data.source.local.AppDatabase
+import com.example.modular_ledger.data.controller.RawSqlController
 
 class MainActivity : AppCompatActivity() {
     companion object {
-    private const val USE_LOCAL_SERVER = false
-    //private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
-     private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
-    private const val LOCAL_URL = "file:///android_asset/www/index.html"
-}
+        private const val USE_LOCAL_SERVER = true
+        
+        // private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
+        private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
+        private const val LOCAL_URL = "file:///android_asset/www/index.html"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +51,17 @@ class MainActivity : AppCompatActivity() {
             domStorageEnabled = true
             cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
         }
+
+        // 取得資料庫實體
+        val db = AppDatabase.getDatabase(applicationContext)
+        
+        // 初始化 Controller
+        val rawSqlController = RawSqlController(db)
+        
+        // 初始化 Bridge Interface，並將 "Android" 注入到 JS 全域物件
+        val webAppInterface = WebAppInterface(this, webView, rawSqlController)
+        webView.addJavascriptInterface(webAppInterface, "Android")
+        // ---------------------------------------------------
 
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {

@@ -2,6 +2,7 @@
 package com.example.modular_ledger
 
 import android.content.Context
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.Toast
@@ -23,6 +24,7 @@ class WebAppInterface(
 ) {
     // 定義 Coroutine Scope 以便在背景執行資料庫操作
     private val scope = CoroutineScope(Dispatchers.Main)
+    private val TAG = "WebAppInterface"
 
     /**
      * 顯示 Toast (保留既有功能)
@@ -45,6 +47,7 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun execSQL(messageJson: String) {
+        Log.d(TAG, "收到 JS 請求 execSQL: $messageJson")
         processBridgeMessage(messageJson) { params ->
             val sql = params.getString("sql")
             val args = params.optJSONArray("args")
@@ -63,6 +66,7 @@ class WebAppInterface(
      */
     @JavascriptInterface
     fun sqlQuery(messageJson: String) {
+        Log.d(TAG, "收到 JS 請求 sqlQuery: $messageJson")
         processBridgeMessage(messageJson) { params ->
             val sql = params.getString("sql")
             val args = params.optJSONArray("args")
