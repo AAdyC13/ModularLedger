@@ -1,0 +1,82 @@
+{
+	"permissions": ["readState", "writeState", "localStorage"],
+	"blueprints": [
+		{
+			"page": "systemPage.Home",
+			"slot": "page-header",
+			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\" id=\"calendar-btn\">日曆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"list-btn\">清單</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能3</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能4</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"setting-btn\">設定</button></nav>",
+			"handlers": [
+				{
+					"event": "click",
+					"selector": "#setting-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "systemPage.Settings",
+						"options": {}
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#calendar-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"ComponentID": "system.HomePage.Calendar",
+						"eventName": "doCalendar_calendar"
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#list-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"ComponentID": "system.HomePage.Calendar",
+						"eventName": "doCalendar_list"
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.Home",
+			"slot": "page-content",
+			"html": "<div class='calendar'></div>",
+			"handlers": [
+				{
+					"event": "init",
+					"selector": ".calendar",
+					"action": "callComponentMethod",
+					"parameters": {
+						"ComponentID": "system.HomePage.Calendar",
+						"eventName": "showCalendar"
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.Home",
+			"slot": "page-footer",
+			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\">選項1</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項2</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"new-record-btn\">記一筆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項4</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項5</button></nav>",
+			"handlers": [
+				{
+					"event": "click",
+					"selector": "#new-record-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "systemPage.Record",
+						"options": {}
+					}
+				}
+			]
+		}
+	],
+	"components": [
+		{
+			"name": "Calendar",
+			"type": "Panel",
+			"entry": "Calendar.js",
+			"html_template": "Calendar.html",
+
+			"component_dependencies": []
+		}
+	],
+	"module_dependencies": []
+}

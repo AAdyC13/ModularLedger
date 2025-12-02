@@ -1,10 +1,6 @@
 class LoggerManager {
     constructor() {
-        if (!LoggerManager.instance) {
-            this.level = 'DEBUG'; // 全局日誌等級
-            LoggerManager.instance = this;
-        }
-        return LoggerManager.instance;
+        this.level = 'DEBUG';
     }
 
     shouldLog(level) {
@@ -15,10 +11,27 @@ class LoggerManager {
     output(message) {
         console.log(message); // 這裡可改成 file 或 server
     }
-}
 
+    /**
+     * 設置全局日誌等級
+     * @param {string} level - 'DEBUG', 'INFO', 'WARN', 'ERROR'
+     */
+    setLevel(level) {
+        const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+        if (levels.includes(level)) {
+            this.level = level;
+        }
+    }
+
+    /**
+     * 獲取當前日誌等級
+     */
+    getLevel() {
+        return this.level;
+    }
+}
 const loggerManager = new LoggerManager();
-Object.freeze(loggerManager);
+export { loggerManager };
 
 
 /**
@@ -39,8 +52,8 @@ export class Logger {
      * @param {string} moduleName - 模組名稱，會在日誌中顯示，用於追蹤來源
      */
     constructor(moduleName) {
-        /** @private */
         this.moduleName = moduleName || 'Unknown';
+        this.debug_auto_counter = 0;
     }
 
     /**
@@ -71,37 +84,38 @@ export class Logger {
      * 輸出 DEBUG 級別日誌
      * @param {string} message - 日誌訊息
      */
-    debug(message) { this.log('DEBUG', message); }
+    debug(message) {
+        if (arguments.length !== 1) throw new Error('Logger.debug expects exactly one argument (message)');
+        this.log('DEBUG', message);
+    }
 
     /**
      * 輸出 INFO 級別日誌
      * @param {string} message - 日誌訊息
      */
-    info(message) { this.log('INFO', message); }
+    info(message) {
+        if (arguments.length !== 1) throw new Error('Logger.info expects exactly one argument (message)');
+        this.log('INFO', message);
+    }
 
     /**
      * 輸出 WARN 級別日誌
      * @param {string} message - 日誌訊息
      */
-    warn(message) { this.log('WARN', message); }
+    warn(message) {
+        if (arguments.length !== 1) throw new Error('Logger.warn expects exactly one argument (message)');
+        this.log('WARN', message);
+    }
 
     /**
      * 輸出 ERROR 級別日誌
      * @param {string} message - 日誌訊息
      */
-    error(message) { this.log('ERROR', message); }
-}
-
-/**
- * 工廠函數，生成指定模組名稱的 Logger 實例
- * @param {string} moduleName - 模組名稱，用於日誌追蹤
- * @returns {Logger} Logger 實例
- *
- * @example
- * import { createLogger } from './logger.js';
- * const logger = createLogger('AuthController');
- * logger.info('Token valid');
- */
-export function createLogger(moduleName) {
-    return new Logger(moduleName);
+    error(message) {
+        if (arguments.length !== 1) throw new Error('Logger.error expects exactly one argument (message)');
+        this.log('ERROR', message);
+    }
+    debugA() {
+        this.log('DEBUG_AUTO', `Auto debug message #${++this.debug_auto_counter}`);
+    }
 }

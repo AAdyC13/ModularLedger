@@ -1,0 +1,9 @@
+{
+	"name": "Home Page",
+	"id": "system.HomePage",
+	"version": "1.0.0",
+	"author": "admin",
+	"description": "模組化記帳系統 - HomePage",
+	"module license": "MIT",
+	"tags": ["finance", "recorder", "UI"]
+}

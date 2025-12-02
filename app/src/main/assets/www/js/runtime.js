@@ -2,80 +2,132 @@
  * Runtime - 初始化和生命週期管理
  */
 
-// import { Router } from './router.js';
-// import { registerComponents } from './components.js';
-import { createLogger } from './logger.js';
-import bridge from './bridge.js';
+import { loggerManager, Logger } from './logger.js';
+import runtimeConfig from './runtimeConfig.js';
+import { eventHub } from './eventHub.js';
+import { Bridge } from './bridge.js';
+
+import { ErrorHandler } from './errorHandler.js';
+import { ModulesManager } from './modulesManager.js';
+import { PageManager } from './pageManager.js';
+import { ElementManager } from './elementManager.js';
+import { Router } from './router.js';
+
+// import { ComponentManager } from './componentManager.js';
+
+
+
 
 class Runtime {
     constructor() {
-        this.router = null;
         this.isInitialized = false;
-        this.bridge = bridge;
-        this.logger = createLogger('Runtime');
-        this.systemModules = {};
-
-
     }
 
     /**
-     * 啟動應用（嚴格資源控制版本）
+     * 啟動應用
      */
     async start() {
         try {
+
+            // --------------------------------------------
+            // 1. 基礎系統初始化 (同步)
+            // --------------------------------------------
+            loggerManager.setLevel(runtimeConfig.logLevel || 'DEBUG');
+
+            this.logger = new Logger('Runtime');
             this.logger.info('Starting application');
 
-            // 1. 檢查必要的 DOM 元素
-            this.checkRequirements();
+            this.checkRequirements(); // 基礎環境檢查
+            this.logger.debug('checkRequirements finished');
 
-            this.systemModules = JSON.parse(window.AndroidBridge.getSystemModulesManifest());
-            this.logger.info("systemModules:" + JSON.stringify(this.systemModules));
+            eventHub.init(new Logger('EventHub'), new Logger('EventAgent')); // 全局事件總線
+            eventHub.setReady();
+            this.eventAgent = eventHub.createAgent('Runtime');
+            const bridge = new Bridge(new Logger('Bridge')); // 與原生交互橋樑
+            this.logger.debug('Basic tools build successfully');
+            // --------------------------------------------
+            // 2. 建立核心管理器實例（但不初始化）
+            // --------------------------------------------
 
-            // 動態載入所有系統模組的進入點 JS
-            for (const module of this.systemModules) {
-                const entryJSPath = `../systemModules/${module.moduleName}/${module.entryJS}`;
-                this.logger.info(`Loading module from: ${module.moduleName}.${module.entryJS}`);
-                try {
-                    await import(entryJSPath);
-                    this.logger.info(`Module ${module.moduleName} loaded successfully`);
-                } catch (error) {
-                    this.logger.error(`Failed to load module ${module.moduleName}: ${error}`);
-                }
+
+            const errorHandler = new ErrorHandler(
+                new Logger('ErrorHandler'),
+                eventHub.createAgent('ErrorHandler'),
+            );
+            this.logger.debug('ErrorHandler build successfully');
+
+            const modulesManager = new ModulesManager(
+                new Logger('ModulesManager'),
+                bridge,
+                eventHub.createAgent('ModulesManager'),
+                runtimeConfig.whitelist || [],
+            );
+            this.logger.debug('ModulesManager build successfully');
+
+            const pageManager = new PageManager(
+                new Logger('PageManager'),
+                bridge,
+                eventHub.createAgent('PageManager'),
+                runtimeConfig.layoutIDs || {}
+            );
+            this.logger.debug('PageManager build successfully');
+
+            const elementManager = new ElementManager(
+                new Logger('ElementManager'),
+                eventHub.createAgent('ElementManager')
+            );
+            this.logger.debug('ElementManager build successfully');
+
+            const router = new Router(
+                new Logger('Router'),
+                eventHub.createAgent('Router'),
+            );
+            this.logger.debug('Router build successfully');
+
+            // const componentManager = new ComponentManager({
+            //     logger: new Logger('ComponentManager'),
+            //     eventHub,
+            // });
+
+            // --------------------------------------------
+            // 3. 並行初始化可 async import 的管理器
+            // --------------------------------------------
+            await Promise.all([
+                errorHandler.init(),
+                modulesManager.init(new Logger('Module')),
+                pageManager.init(runtimeConfig.preLoadPages || []),
+                elementManager.init(),
+                router.init(),
+            ]);
+            this.logger.debug('All System initialized');
+
+
+            // --------------------------------------------
+            // x. 啟動頁面渲染
+            // --------------------------------------------
+            if (!runtimeConfig.indexPage) {
+                throw new Error('indexPage is not defined in runtimeConfig');
             }
+            //this.eventAgent.emit('Index_page_is', runtimeConfig.indexPage, {});
+            router.indexPageIs(runtimeConfig.indexPage);
 
-            // // 2. 註冊全局組件(預載入所有組件 HTML)
-            // this.logger.info('Preloading components...');
-            // await registerComponents();
+            modulesManager.enableSystemModules();
 
-            // // 3. 初始化路由器
-            // this.logger.info('Initializing router...');
-            // this.router = new Router();
+            
 
-            // // 4. 注入全域組件引用到路由器
-            // const { components, createComponent, getComponent } = await import('./components.js');
 
-            // // 創建組件管理器代理
-            // const componentsManager = { createComponent, getComponent };
-
-            // // 註冊到路由器（傳遞所有已註冊的單例組件）
-            // this.router.registerGlobalComponents(components, componentsManager);
-
-            // // 5. 預載入所有頁面（HTML 和 JS 模組）
-            // this.logger.info('Preloading all pages...');
-            // await this.router.preloadAllPages();
-
-            // // 6. 載入首頁
-            // this.logger.info('Loading home page from cache...');
-            // await this.router.navigate('pages/home.html', { replace: true, skipAnimation: true });
-
-            // 7. 標記為已初始化
+            // --------------------------------------------
+            // x. finished
+            // --------------------------------------------
+            window.errorHandler = errorHandler; // 供崩潰畫面使用
+            await router.start();
             this.isInitialized = true;
-
-            this.logger.info('Application started successfully!');
+            this.logger.info('Application started successfully');
 
         } catch (error) {
-            this.logger.error(`Application startup failed: ${error}`);
-
+            if (this.logger) {
+                this.logger.error(`Application startup failed: ${error}`);
+            }
             this.handleStartupError(error);
         }
     }

@@ -1,10 +1,4 @@
-/**
- * Home Page
- * 首頁邏輯 - 處理首頁特定的交互和事件
- */
-import { BasePage } from './BasePage.js';
-
-export class HomePage extends BasePage {
+export class HomePage {
     constructor(router) {
         super(router);
         this.settingPanel = null;

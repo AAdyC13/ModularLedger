@@ -24,8 +24,6 @@ class MainActivity : AppCompatActivity() {
         WebView.setWebContentsDebuggingEnabled(true)
 
         val webView = WebView(this)
-        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
-        webView.addJavascriptInterface(AndroidBridge(this), "AndroidBridge")
 
         // WebView 基本設定
         val settings = webView.settings
@@ -40,7 +38,7 @@ class MainActivity : AppCompatActivity() {
                 WebViewAssetLoader.Builder()
                         .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
                         .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(this))
-                        // 你也可以加上一個自訂的 PathHandler 來服務內部儲存的 user modules (見下方)
+                        // 可加上自訂的 PathHandler
                         .build()
 
         webView.webViewClient =
@@ -82,8 +80,12 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+
+        webView.addJavascriptInterface(AndroidBridge(this, BackgroundWorker(this)), "AndroidBridge")
         setContentView(webView)
+        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
     }
+
     private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {
         // 如果你要加入 CSP header 或其他自訂 header，可建立新的 WebResourceResponse 並包入 headers
         val mimeType = orig.mimeType ?: "text/plain"

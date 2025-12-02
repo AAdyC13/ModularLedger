@@ -1,56 +1,61 @@
-import { createLogger } from './logger.js';
 /**
  * Android Bridge - WebView 統一的接口與 Android 原生層交互
  */
-class AndroidBridge {
-    constructor() {
+export class Bridge {
+    constructor(logger) {
         this.isAndroid = this.detectAndroid();
-        this.logger = createLogger('AndroidBridge');
+        this.logger = logger;
+
+        if (!this.isAndroid) {
+            this.logger.warn('Not in Android environment, Android methods will return null');
+        }
     }
 
-    /**
-     * 檢測是否在 Android WebView 環境中
-     */
     detectAndroid() {
-        return typeof window.AndroidBridge !== 'undefined';
+        return typeof window.AndroidBridge !== 'undefined'; // 檢測是否在 Android WebView 環境中
     }
 
     /**
      * 調用 Android 原生方法（同步）
      * @param {string} method - 方法名
-     * @param {...any} args - 參數
-     * @returns {any} - 返回結果
+     * @param {...any} args - 參數（自動處理編解碼）
+     * @returns {any} - 返回結果（自動解碼）
      */
     callSync(method, ...args) {
         if (!this.isAndroid) {
-            console.warn(`[Bridge] Not in Android environment, method: ${method}`);
+            this.logger.warn(`Not in Android environment, now method: ${method}`);
             return null;
         }
 
         try {
-            if (typeof window.AndroidBridge[method] === 'function') {
-                const result = window.AndroidBridge[method](...args);
+            const fn = window.AndroidBridge[method];
+            if (typeof fn === 'function') {
+                
+                // 自動編碼複雜類型參數
+                const encodedArgs = args.map(arg => {
+                    if (arg !== null && typeof arg === 'object') {
+                        return this.encodeRequest(arg);
+                    }
+                    return arg;
+                });
+                const result = window.AndroidBridge[method](...encodedArgs);
+                //  this.logger.debug(`Called Android method: ${method} with args: ${JSON.stringify(args)},\n value: ${result}`);
+                // 自動解碼複雜類型返回值
+                if (typeof result === 'string') {
+                    try {
+                        const decoded = this.decodeResponse(result);
+                        return decoded !== null ? decoded : result;
+                    } catch {
+                        return result;
+                    }
+                }
                 return result;
             } else {
-                console.error(`[Bridge] Method ${method} not found in AndroidBridge`);
+                this.logger.error(`Method ${method} not found in AndroidBridge`);
                 return null;
             }
         } catch (error) {
-            console.error(`[Bridge] Error calling ${method}:`, error);
-            return null;
-        }
-    }
-
-    /**
-     * 獲取測試 JSON 數據
-     * @returns {object|null} - 解析後的 JSON 對象
-     */
-    getTestJson() {
-        try {
-            const jsonString = this.callSync('getTestJson');
-            return jsonString ? JSON.parse(jsonString) : null;
-        } catch (error) {
-            console.error('[Bridge] Error parsing JSON:', error);
+            this.logger.error(`Error calling ${method}:` + error);
             return null;
         }
     }
@@ -68,13 +73,7 @@ class AndroidBridge {
      * @returns {object|null} - 設備信息對象
      */
     getDeviceInfo() {
-        try {
-            const infoString = this.callSync('getDeviceInfo');
-            return infoString ? JSON.parse(infoString) : null;
-        } catch (error) {
-            console.error('[Bridge] Error parsing device info:', error);
-            return null;
-        }
+        return this.callSync('getDeviceInfo');
     }
 
     /**
@@ -83,7 +82,7 @@ class AndroidBridge {
      * @param {any} value - 值
      */
     saveData(key, value) {
-        return this.callSync('saveData', key, JSON.stringify(value));
+        return this.callSync('saveData', key, value);
     }
 
     /**
@@ -92,13 +91,7 @@ class AndroidBridge {
      * @returns {any|null} - 讀取的數據
      */
     loadData(key) {
-        try {
-            const dataString = this.callSync('loadData', key);
-            return dataString ? JSON.parse(dataString) : null;
-        } catch (error) {
-            console.error('[Bridge] Error parsing loaded data:', error);
-            return null;
-        }
+        return this.callSync('loadData', key);
     }
 
     /**
@@ -141,27 +134,63 @@ class AndroidBridge {
         return this.callSync('checkNetworkStatus');
     }
 
-    /**
-     * 打開外部瀏覽器
-     * @param {string} url - URL
-     */
-    openExternalBrowser(url) {
-        return this.callSync('openExternalBrowser', url);
+    // /**
+    //  * 打開外部瀏覽器
+    //  * @param {string} url - URL
+    //  */
+    // openExternalBrowser(url) {
+    //     return this.callSync('openExternalBrowser', url);
+    // }
+
+    exitApp() {
+        this.logger.info('Exiting application');
+        return this.callSync('exitApp');
     }
 
     /**
-     * 退出應用
+     * JSON 編碼器：將複雜資料包裝為 JSON 字串
+     * 只用於 Object/Array 等複雜類型，基本類型 (string/number/boolean) 不需使用
+     * @param {Object|Array} content - 要包裝的複雜內容
+     * @returns {string} - 格式化的 JSON 字串: {"type":"類型", "content":內容}
      */
-    exitApp() {
-        return this.callSync('exitApp');
+    encodeRequest(content) {
+        let type;
+
+        if (Array.isArray(content)) {
+            type = 'Array';
+        } else if (typeof content === 'object' && content !== null) {
+            type = 'Object';
+        } else {
+            throw new Error('encodeRequest only for complex types (Object/Array). Use direct parameter for primitives.');
+        }
+
+        return JSON.stringify({
+            type: type,
+            content: content
+        });
+    }
+
+    /**
+     * JSON 解碼器：解析後端返回的複雜資料
+     * @param {string} responseString - 後端返回的 JSON 字串
+     * @returns {any|null} - 解析後的 content，若失敗返回 null
+     */
+    decodeResponse(responseString) {
+        if (!responseString) {
+            return null;
+        }
+
+        try {
+            const response = JSON.parse(responseString);
+            if (response && typeof response === 'object' && 'type' in response && 'content' in response) {
+                return response.content;
+            }
+            this.logger.warn('Invalid response format:' + response);
+            return null;
+        } catch (error) {
+            this.logger.error('Error decoding response:' + error);
+            return null;
+        }
     }
 }
 
-// 創建全局 bridge 實例
-const bridge = new AndroidBridge();
-
-// 同時掛載到 window 供非模組環境使用
-window.bridge = bridge;
-
-// 導出 bridge 實例
-export default bridge;
