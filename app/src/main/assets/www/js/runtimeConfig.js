@@ -25,7 +25,7 @@ const runtimeConfig = {
     preLoadPages: [
         { pageID: 'systemPage.Home', layoutID: 'tcb' },
         { pageID: 'systemPage.Recorder', layoutID: 'full' },
-        { pageID: 'systemPage.Settings', layoutID: 'drawer' },
+        { pageID: 'systemPage.Settings', layoutID: 'full' },
         { pageID: 'systemPage.Accounts', layoutID: 'tabs' },
         { pageID: 'systemPage.Searcher', layoutID: 'search' }
     ],
