@@ -1,0 +1,76 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Module Tech Schema",
+	"type": "object",
+	"required": [],
+	"properties": {
+		"permissions": {
+			"type": "array",
+			"items": {
+				"enum": ["readState", "writeState", "network", "localStorage"]
+			},
+			"description": "模組申請的操作權限"
+		},
+		"blueprints": {
+            "description": "頁面注入組件聲明",
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["page", "slot", "html", "handlers"],
+				"properties": {
+					"page": {
+						"type": "string",
+						"enum": [
+							"systemPage.Home",
+							"systemPage.Recorder",
+							"systemPage.Settings",
+							"systemPage.Accounts",
+							"systemPage.Searcher"
+						],
+						"description": "對應固定 page 名稱"
+					},
+					"slot": { "type": "string", "description": "page 上的插槽名稱" },
+					"html": {
+						"type": "string",
+						"description": "注入的 HTML 內容"
+					},
+					"handlers": {
+						"description": "事件處理器"
+					}
+				},
+				"additionalProperties": true
+			}
+		},
+		"components": {
+			"type": "array",
+			"items": {
+				"type": "object",
+				"required": ["name", "type", "entry"],
+				"properties": {
+					"name": { "type": "string", "description": "component 名稱" },
+					"type": {
+						"type": "string",
+						"enum": ["Panel", "Logic"],
+						"description": "component 類型"
+					},
+					"entry": {
+						"type": "string",
+						"description": "component JS 入口路徑"
+					},
+					"component_dependencies": {
+						"type": "array",
+						"items": { "type": "string" },
+						"description": "其他依賴 component 名稱"
+					}
+				},
+				"additionalProperties": true
+			}
+		},
+		"module_dependencies": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "此模組依賴的其他模組"
+		}
+	},
+	"additionalProperties": false
+}

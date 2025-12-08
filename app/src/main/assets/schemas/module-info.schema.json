@@ -1,0 +1,41 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Module Info Schema",
+	"type": "object",
+	"required": ["name", "id", "version", "author"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"description": "模組名稱"
+		},
+		"id": {
+			"type": "string",
+			"pattern": "^[a-zA-Z0-9.\\-_]+$",
+			"description": "模組唯一 ID"
+		},
+		"version": {
+			"type": "string",
+			"pattern": "^\\d+\\.\\d+\\.\\d+$",
+			"description": "版本號，格式 x.y.z"
+		},
+		"author": {
+			"type": "string",
+			"minLength": 1,
+			"description": "模組作者"
+		},
+		"description": {
+			"type": "string",
+			"description": "模組簡介"
+		},
+		"module license": {
+			"type": "string",
+			"description": "模組授權資訊"
+		},
+		"tags": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "模組標籤，用於分類或搜索"
+		}
+	}
+}

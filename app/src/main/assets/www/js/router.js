@@ -1,163 +1,179 @@
 /**
  * Router - 頁面路由管理器
- * 處理 SPA 的頁面導航和歷史記錄
  */
 export class Router {
-    constructor() {
+    constructor(logger, eventAgent) {
+        this.logger = logger;
+        this.eventAgent = eventAgent;
         this.currentPage = null;
-        this.currentPageInstance = null;
-        this.history = [];
-
-        this.init();
+        this.pageCaches = {}; // 頁面快取
     }
 
-    /**
-     * 初始化路由器
-     */
     init() {
-        // 監聽瀏覽器返回按鈕
-        window.addEventListener('popstate', (event) => {
-            this.handlePopState(event);
+
+        this.eventAgent.on('PM:Finish_preloade_page', this.addPageToCache.bind(this));
+
+        this.eventAgent.on('PM:Del_preloade_page', (PEid) => {
+            delete this.pageCaches[PEid];
+            this.logger.debug(`Page deleted from cache: [${PEid}]`);
         });
+        this.eventAgent.on('RT::Index_page_is', this.indexPageIs.bind(this));
+        this.eventAgent.on('EM:navigate', this.proxyNavigate.bind(this));
+
+    }
+    async proxyNavigate(data) {
+        await this.navigate(data.pageID, data.options);
+    }
+    addPageToCache(PE) {
+        // this.logger.debug(`Adding page to cache: ${PE.id}`);
+        if (!PE || !PE.id) {
+            this.logger.error('Invalid pageID or pageElement for caching');
+            return;
+        }
+        this.pageCaches[PE.id] = PE.getRoot();
+        this.logger.debug(`Page added to cache: [${PE.id}]`);
+    }
+    indexPageIs(pageID) {
+        this.indexPage = pageID;
+        this.logger.debug(`Index page set to: ${this.indexPage}`);
     }
 
     /**
      * 導航到指定頁面
-     * @param {string} url - 頁面 URL
-     * @param {object} options - 導航選項
+     * @param {string} pageID - 頁面 ID
+     * @param {object} options - 換頁選項
      */
-    async navigate(url, options = {}) {
+    async navigate(pageID, options = {}) {
         try {
-            // 載入頁面內容
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const html = await response.text();
-
             // 獲取應用容器
             const app = document.getElementById('app');
             if (!app) {
                 throw new Error('App container not found');
             }
 
-            // 清理當前頁面
-            if (this.currentPageInstance && typeof this.currentPageInstance.destroy === 'function') {
-                this.currentPageInstance.destroy();
+            // const animation = options.animation; // undefined = 預設 fade
+
+            // 1. 執行離開動畫（如果不是首次載入）
+            // if (this.currentPage && !options.skipAnimation) {
+            //     await this.executeExitAnimation(app, animation);
+            // }
+
+            // 2. 從快取讀取頁面 HTML（永遠不 fetch），如果沒有則等待最多1秒
+            let next_page = this.pageCaches[pageID];
+            if (!next_page) {
+                try {
+                    this.logger.debug(`Page not in cache, waiting to load: ${pageID}`);
+                    next_page = await this.waitForPage(pageID);
+                } catch (err) {
+                    // 警告! router.pageCaches沒有這一頁，不進行導航，未來可新增alrt告知用戶
+                    this.logger.error(`Page not preloaded, cannot navigate: ${pageID}`);
+                    return;
+                }
+            }
+            this.logger.debug(`Loaded page from cache: ${pageID}`);
+
+            // 3. 處理當前頁面實例（）
+            if (this.currentPage) {
             }
 
-            // 更新 DOM
-            app.innerHTML = html;
+            // 4. 更新 DOM
+            app.replaceChildren(next_page);
+            this.eventAgent.emit('Router:Finish_navigate', pageID, {});
 
-            // 執行頁面腳本
-            await this.executePageScripts(app, url);
+            // 6. 記錄當前頁面（WebView 環境不需要修改 URL）
+            this.currentPage = next_page;
 
-            // 更新瀏覽器歷史記錄
-            if (!options.replace) {
-                history.pushState({ page: url }, '', url);
-            }
 
-            // 記錄當前頁面
-            this.currentPage = url;
+            // 8. 執行進入動畫
+            // if (!options.skipAnimation) {
+            //     await this.executeEnterAnimation(app, animation);
+            // }
 
         } catch (error) {
-            console.error('頁面載入失敗:', error);
-            this.handleError(error, url);
+            this.handleError(error, pageID);
         }
     }
 
     /**
-     * 執行頁面中的腳本
-     * @param {HTMLElement} container - 頁面容器
-     * @param {string} url - 頁面 URL
+     * 等待頁面載入到快取，最多等待1秒
+     * @param {string} pageID - 頁面 ID
+     * @returns {Promise<HTMLElement>} 頁面元素
      */
-    async executePageScripts(container, url) {
-        const scripts = container.querySelectorAll('script');
+    waitForPage(pageID) {
+        return new Promise((resolve, reject) => {
+            const startTime = Date.now();
+            const interval = setInterval(() => {
+                if (this.pageCaches[pageID]) {
+                    clearInterval(interval);
+                    resolve(this.pageCaches[pageID]);
+                } else if (Date.now() - startTime > 1000) {
+                    clearInterval(interval);
+                    reject(new Error(`Page not preloaded within 1 second: ${pageID}`));
+                }
+            }, 50); // 每50ms檢查一次
+        });
+    }
 
-        for (const script of scripts) {
-            const newScript = document.createElement('script');
+    async start() {
+        this.eventAgent.emit('Router:Starting', this.indexPage, {});
+        await this.eventAgent.callMeBack();
 
-            if (script.src) {
-                // 外部腳本
-                newScript.src = script.src;
-                await new Promise((resolve, reject) => {
-                    newScript.onload = resolve;
-                    newScript.onerror = reject;
-                    script.parentNode.replaceChild(newScript, script);
-                });
-            } else {
-                // 內聯腳本
-                newScript.textContent = script.textContent;
-                script.parentNode.replaceChild(newScript, script);
-            }
-        }
-
-        // 嘗試載入對應的頁面 JS 模組
-        await this.loadPageModule(url);
+        this.logger.debug(`Starting navigation to index page: ${this.indexPage}`);
+        this.navigate(this.indexPage, {});
     }
 
     /**
-     * 載入頁面對應的 JS 模組
-     * @param {string} url - 頁面 URL
+     * 等待指定時間
+     * @param {number} ms - 毫秒
      */
-    async loadPageModule(url) {
-        console.log('Attempting to load page module for:', url);
-        try {
-            // 將 .html 替換為 .js
-            const moduleUrl = url.replace('.html', '.js');
-            // 動態導入模組
-            const module = await import('/' + moduleUrl);
+    wait(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-            // 如果模組導出了頁面類，實例化它
-            if (module.HomePage) {
-                const { settingPanel } = await import('./components.js');
-                this.currentPageInstance = new module.HomePage(this, settingPanel);
-            } else if (module.NewRecordPage) {
-                this.currentPageInstance = new module.NewRecordPage(this);
-            } else if (module.default) {
-                this.currentPageInstance = new module.default(this);
-            }
-
-            // 將路由器掛載到 window，供頁面內腳本使用
-            window.appRouter = this;
-        } catch (error) {
-            // 頁面沒有對應的 JS 模組，這是正常的
-            console.log('No page module found for:', url);
-        }
-    }    /**
-     * 處理瀏覽器返回按鈕
-     * @param {PopStateEvent} event - popstate 事件
+    /**
+     * 執行頁面離開動畫
+     * @param {HTMLElement} app - 應用容器
+     * @param {string|function} animation - 動畫類型或自定義函數
+     * @returns {Promise<void>}
      */
-    handlePopState(event) {
-        if (event.state && event.state.page) {
-            // 導航到歷史記錄中的頁面
-            this.navigate(event.state.page, { replace: true });
+    async executeExitAnimation(app, animation) {
+        if (typeof animation === 'function') {
+            // 自定義動畫：由調用者完全控制
+            await animation('exit', app);
+        } else if (animation && animation !== 'fade') {
+            // 內建動畫：未來添加的重複性動畫
+            app.classList.add(`page-exit-${animation}`);
+            await this.wait(300);
         } else {
-            // 返回首頁
-            this.navigate('pages/home.html', { replace: true });
+            // 預設 fade 動畫
+            app.classList.add('page-exit-fade');
+            await this.wait(300);
         }
     }
 
     /**
-     * 返回上一頁
+     * 執行頁面進入動畫
+     * @param {HTMLElement} app - 應用容器
+     * @param {string|function} animation - 動畫類型或自定義函數
+     * @returns {Promise<void>}
      */
-    back() {
-        window.history.back();
-    }
-
-    /**
-     * 前進到下一頁
-     */
-    forward() {
-        window.history.forward();
-    }
-
-    /**
-     * 替換當前頁面
-     * @param {string} url - 頁面 URL
-     */
-    replace(url) {
-        this.navigate(url, { replace: true });
+    async executeEnterAnimation(app, animation) {
+        if (typeof animation === 'function') {
+            // 自定義動畫：由調用者完全控制
+            await animation('enter', app);
+        } else if (animation && animation !== 'fade') {
+            // 內建動畫：未來添加的重複性動畫
+            app.classList.add(`page-enter-${animation}`);
+            app.offsetHeight; // 觸發重排
+            await this.wait(300);
+            app.classList.remove(`page-enter-${animation}`);
+        } else {
+            // 預設 fade 動畫
+            app.classList.add('page-enter-fade');
+            app.offsetHeight; // 觸發重排
+            await this.wait(300);
+            app.classList.remove('page-enter-fade');
+        }
     }
 
     /**
@@ -166,7 +182,7 @@ export class Router {
      * @param {string} url - 出錯的 URL
      */
     handleError(error, url) {
-        console.error('路由錯誤:', error);
+        this.logger.error(`Routing error: ${error}`);
 
         // 可以顯示錯誤頁面或使用傳統跳轉作為降級方案
         const app = document.getElementById('app');
@@ -179,12 +195,5 @@ export class Router {
                 </div>
             `;
         }
-    }
-
-    /**
-     * 獲取當前頁面 URL
-     */
-    getCurrentPage() {
-        return this.currentPage;
     }
 }

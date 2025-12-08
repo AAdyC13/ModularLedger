@@ -1,0 +1,9 @@
+{
+	"name": "Home Page builder",
+	"id": "system.HomePage",
+	"version": "1.0.0",
+	"author": "admin",
+	"description": "模組化記帳系統 - 建構首頁",
+	"module license": "MIT",
+	"tags": ["system"]
+}

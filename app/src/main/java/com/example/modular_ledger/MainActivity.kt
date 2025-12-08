@@ -1,71 +1,114 @@
 package com.example.modular_ledger
 
 import android.os.Bundle
-import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.modular_ledger.ui.theme.Modular_ledgerTheme
-
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.getValue
+import androidx.webkit.WebViewAssetLoader
+import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var assetLoader: WebViewAssetLoader
+
     companion object {
-    private const val USE_LOCAL_SERVER = false
-    //private const val SERVER_URL = "http://10.0.2.2:3000/" // 模擬器用
-     private const val SERVER_URL = "http://163.18.29.38:3000/"  // 實體裝置用
-    private const val LOCAL_URL = "file:///android_asset/www/index.html"
-}
+        private const val SERVER_URL = "http://163.18.29.38:3000/" // 實體裝置用
+        private const val LOCAL_URL = "https://appassets.androidplatform.net/assets/www/index.html"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val webView = WebView(this)
-        setContentView(webView)
-
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
-        }
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
-                view?.loadUrl(url ?: "")
-                return true
-            }
-        }
-
         WebView.setWebContentsDebuggingEnabled(true)
 
-        // 根據設定載入不同來源
-        val url = if (USE_LOCAL_SERVER) LOCAL_URL else SERVER_URL
-        webView.loadUrl(url)
+        val webView = WebView(this)
+
+        // WebView 基本設定
+        val settings = webView.settings
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = false // 不要開 file:// 讀取
+        settings.allowContentAccess = false
+        settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+
+        // 建立 AssetLoader
+        assetLoader =
+                WebViewAssetLoader.Builder()
+                        .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+                        .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(this))
+                        // 可加上自訂的 PathHandler
+                        .build()
+
+        webView.webViewClient =
+                object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                            view: WebView,
+                            request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        // 1) 先讓 assetLoader 嘗試處理
+                        val response = assetLoader.shouldInterceptRequest(request.url)
+                        if (response != null) {
+                            // 可在這裡包一層 header (例如加入 CSP)
+                            return addSecurityHeaders(response)
+                        }
+
+                        // 2) 其他請求（外部） → 根據策略允許或阻擋
+                        // return super.shouldInterceptRequest(view, request)
+                        return WebResourceResponse(
+                                "text/plain",
+                                "UTF-8",
+                                403,
+                                "Forbidden",
+                                null,
+                                null
+                        )
+                    }
+
+                    override fun shouldOverrideUrlLoading(
+                            view: WebView,
+                            request: WebResourceRequest
+                    ): Boolean {
+                        val url = request.url.toString()
+                        // 嚴格控制導航：阻擋跳出 app 的外部連結（或提示使用外部瀏覽器）
+                        if (isAllowedExternalUrl(url)) {
+                            return false
+                        } else {
+                            // 攔截掉或顯示對話框
+                            return true
+                        }
+                    }
+                }
+
+        webView.addJavascriptInterface(AndroidBridge(this, BackgroundWorker(this)), "AndroidBridge")
+        setContentView(webView)
+        webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
     }
-}
 
+    private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {
+        // 如果你要加入 CSP header 或其他自訂 header，可建立新的 WebResourceResponse 並包入 headers
+        val mimeType = orig.mimeType ?: "text/plain"
+        val encoding = orig.encoding ?: "utf-8"
+        val inputStream = orig.data ?: ByteArrayInputStream(ByteArray(0))
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+        // 範例 CSP：只允許同 origin 的資源與指定域名（依實際需求調整）
+        val headers = HashMap<String, String>()
+        headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self';"
+        headers["X-Frame-Options"] = "DENY"
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    Modular_ledgerTheme {
-        Greeting("Android")
+        return WebResourceResponse(
+                mimeType,
+                encoding, /*statusCode*/
+                200, /*reasonPhrase*/
+                "OK",
+                headers,
+                inputStream
+        )
+    }
+
+    private fun isAllowedExternalUrl(url: String): Boolean {
+        // 例如只允許特定 API 網域，或使用 external browser
+        return url.startsWith("https://www.example.com")
     }
 }

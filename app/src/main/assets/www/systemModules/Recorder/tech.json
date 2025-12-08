@@ -1,0 +1,19 @@
+{
+	"permissions": ["readState", "writeState", "localStorage"],
+	"blueprints": [],
+	"components": [
+		{
+			"name": "Recorder",
+			"type": "Panel",
+			"entry": "Recorder.js",
+			"html_template": "Recorder.html",
+			"css_template": "Recorder.css",
+			"panel_location": {
+				"pageID": "systemPage.Recorder",
+				"slot": "page-content"
+			},
+			"component_dependencies": []
+		}
+	],
+	"module_dependencies": []
+}
