@@ -1,0 +1,22 @@
+{
+	"permissions": ["readState", "writeState", "localStorage"],
+	"blueprints": [
+		
+	],
+	"components": [
+		{
+			"name": "Calendar",	
+			"type": "Panel",
+			"entry": "",
+			"html_template": "",
+			"css_template": "",
+			"panel_location": {
+				"pageID": "systemPage.Settings",
+				"slot": "page-content"
+			},
+
+			"component_dependencies": []
+		}
+	],
+	"module_dependencies": []
+}
