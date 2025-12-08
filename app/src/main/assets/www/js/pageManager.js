@@ -11,9 +11,11 @@ export class PageManager {
     async init(preLoadPages = []) {
         try {
             // 監聽事件
-            this.eventAgent.on("Module_enabled", this.analysisBlueprint.bind(this));
-            this.eventAgent.on("Index_page_is", this.indexPagePreload.bind(this));
-            this.eventAgent.on("Router_Starting", this.sendingPageToRouter.bind(this));
+            this.eventAgent.on("MM:Module_enabled", this.analysisBlueprint.bind(this));
+            this.eventAgent.on("RT::Index_page_is", this.indexPagePreload.bind(this));
+            this.eventAgent.on("Router:Starting", this.sendingPageToRouter.bind(this));
+            this.eventAgent.on("Router:Finish_navigate", this.preLoadPages.bind(this));
+            this.eventAgent.on("MM:Module_fully_enabled", this.handleModuleFullyEnabled.bind(this));
 
             const res = await fetch("https://appassets.androidplatform.net/assets/www/pages/layout.html");
             const html = await res.text();
@@ -42,6 +44,30 @@ export class PageManager {
         }
         for (const page of preLoadPages) {
             this.createPage(page.pageID, page.layoutID);
+        }
+    }
+    handleModuleFullyEnabled(data) {
+        for (const pageID in this.PageElements) {
+            this.sendingFinishCreate(pageID);
+        }
+    }
+    preLoadPages(pageID) {
+        try {
+            if (!this.PageElements[pageID]) {
+                this.logger.error(`Preload page [${pageID}] not found`);
+                throw new Error(`Preload page [${pageID}] not found`);
+            }
+            for (const connectedPageID of this.PageElements[pageID].connectingPages) {
+                if (!this.PageElements[connectedPageID]) {
+                    this.logger.error(`Connected preload page [${connectedPageID}] not found`);
+                    return;
+                    // throw new Error(`Connected preload page [${connectedPageID}] not found`);
+                }
+                this.sendingPageToRouter(connectedPageID);
+            }
+
+        } catch (error) {
+            this.logger.error(`PageManager preLoadPages failed: ${error}`);
         }
     }
     indexPagePreload(pageID) {
@@ -74,14 +100,15 @@ export class PageManager {
                     //this.createPage();
                     //this.PageElements[pageID].connectingModules.push(modID);
                     this.logger.error(`PageElement [${pageID}] not found for module: ${modID}`);
-                    this.eventAgent.emit('Fail_create_page', pageID);
+                    this.eventAgent.emit('PM:Fail_create_page', pageID);
                     continue;
                 }
-                if (!this.PageElements[pageID].connectingModules.includes(modID)) {
-                    this.PageElements[pageID].connectingModules.push(modID);
-                    this.sendingFinishCreate(pageID);
+                if (!this.PageElements[pageID].connectingModules.has(modID)) {
+                    this.PageElements[pageID].connectingModules.add(modID);
+                    //this.sendingFinishCreate(pageID);
                 }
             }
+            this.eventAgent.emit('PM:analysis_complete', { sysName: "PageManager", modID: modID }, {});
         } catch (error) {
             this.logger.error(`PageManager analysisBlueprint failed: ${error}`);
         }
@@ -100,8 +127,9 @@ export class PageManager {
 
         this.PageElements[pageID] = new PageElement(pageID, dom);
         this.logger.debug(`Page created: ${pageID}`);
-        this.sendingFinishCreate(pageID);
+        //this.sendingFinishCreate(pageID);
     }
+
     async sendingPageToRouter(pageID) {
         try {
             this.logger.debug(`Sending page to Router: ${pageID}`);
@@ -112,11 +140,14 @@ export class PageManager {
             if (!this.checkPageStable(pageID)) {
                 await this.waitForStable(pageID);
             }
-            this.eventAgent.emit('Finish_preloade_page', PE, {});
+            this.eventAgent.emit('PM:Finish_preloade_page', PE, {});
+
         } catch (error) {
             this.logger.error(`PageManager sendingPageToRouter failed: ${error}`);
         }
     }
+
+
     // 警告! 等待頁面被建立並穩定下來(暫時沒想到更好的方法，暴力破解)
     waitForStable(pageID) {
         return new Promise((resolve, reject) => {
@@ -135,31 +166,27 @@ export class PageManager {
     checkPageStable(pageID) {
         // 此處可擴充檢查元素是否都已經就緒
         const PE = this.PageElements[pageID];
-        return PE.elements_checked;
+        return PE.elements_checked && PE.components_checked;
     }
     sendingFinishCreate(pageID) {
+        if (!this.PageElements[pageID]) {
+            this.logger.error(`PageElement [${pageID}] not found for sendingFinishCreate`);
+            return;
+        }
+        this.eventAgent.emit('PM:Finish_create_page', this.PageElements[pageID], {});
         this.PageElements[pageID].elements_checked = false;
-        this.eventAgent.emit('Finish_create_page', this.PageElements[pageID], {});
+        this.PageElements[pageID].components_checked = false;
     }
-    // putElementToPE(pageID, element, slotID) {
-    //     const PE = this.PageElements[pageID];
-    //     if (!PE) {
-    //         this.logger.error(`PageElement not found: ${pageID}`);
-    //         throw new Error(`PageElement ${pageID} not found`);
-    //     }
-    //     if (element.goto) { 
-    //         PE.connectingPages.push(element.goto);
-    //     }
-    //     PE.putElement(element, slotID);
-    // }
+
 }
 class PageElement {
     constructor(pageID, dom) {
         this.id = pageID;
         this.dom = dom; // 真正的 DOM element（cloneNode 出來的）
-        this.connectingPages = []; // 連接的pages
-        this.connectingModules = []; // 連接的modules
+        this.connectingPages = new Set(); // 連接的pages
+        this.connectingModules = new Set(); // 連接的modules
         this.elements_checked = false;
+        this.components_checked = false;
     }
 
     getRoot() {

@@ -20,8 +20,9 @@
 					"selector": "#calendar-btn",
 					"action": "callComponentMethod",
 					"parameters": {
-						"ComponentID": "system.HomePage.Calendar",
-						"eventName": "doCalendar_calendar"
+						"moduleID": "system.HomePage",
+						"componentName": "Calendar",
+						"methodName": "doCalendar_calendar"
 					}
 				},
 				{
@@ -29,28 +30,14 @@
 					"selector": "#list-btn",
 					"action": "callComponentMethod",
 					"parameters": {
-						"ComponentID": "system.HomePage.Calendar",
-						"eventName": "doCalendar_list"
+						"moduleID": "system.HomePage",
+						"componentName": "Calendar",
+						"methodName": "doCalendar_list"
 					}
 				}
 			]
 		},
-		{
-			"page": "systemPage.Home",
-			"slot": "page-content",
-			"html": "<div class='calendar'></div>",
-			"handlers": [
-				{
-					"event": "init",
-					"selector": ".calendar",
-					"action": "callComponentMethod",
-					"parameters": {
-						"ComponentID": "system.HomePage.Calendar",
-						"eventName": "showCalendar"
-					}
-				}
-			]
-		},
+
 		{
 			"page": "systemPage.Home",
 			"slot": "page-footer",
@@ -61,7 +48,7 @@
 					"selector": "#new-record-btn",
 					"action": "navigate",
 					"parameters": {
-						"pageID": "systemPage.Record",
+						"pageID": "systemPage.Recorder",
 						"options": {}
 					}
 				}
@@ -72,8 +59,13 @@
 		{
 			"name": "Calendar",
 			"type": "Panel",
-			"entry": "Calendar.js",
-			"html_template": "Calendar.html",
+			"entry": "RecordCalendar\\RecordCalendar.js",
+			"html_template": "RecordCalendar\\RecordCalendar.html",
+			"css_template": "RecordCalendar\\RecordCalendar.css",
+			"panel_location": {
+				"pageID": "systemPage.Home",
+				"slot": "page-content"
+			},
 
 			"component_dependencies": []
 		}

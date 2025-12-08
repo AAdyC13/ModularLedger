@@ -73,12 +73,7 @@ export class ErrorHandler {
         }
 
         // 記錄日誌
-        this.logger.error(`[${error.type}] ${error.message}`, {
-            filename: error.filename,
-            line: error.lineno,
-            column: error.colno,
-            stack: error.stack
-        });
+        this.logger.error(`[${error.type}] ${error.message} - filename: ${error.filename}, line: ${error.lineno}, column: ${error.colno}, stack: ${error.stack}`);
 
         // 檢查是否達到崩潰閾值
         if (this.shouldTriggerCrashProtection()) {
@@ -349,7 +344,7 @@ export class ErrorHandler {
             const report = localStorage.getItem('app_crash_report');
             if (report) {
                 const crashData = JSON.parse(report);
-                this.logger.warn('Previous crash detected:', crashData);
+                this.logger.warn(`Previous crash detected: ${JSON.stringify(crashData)}`);
                 return crashData;
             }
         } catch (e) {

@@ -8,8 +8,33 @@ class LoggerManager {
         return levels.indexOf(level) >= levels.indexOf(this.level);
     }
 
-    output(message) {
-        console.log(message); // 這裡可改成 file 或 server
+    output(type, message) {
+        switch (type) {
+            case 'DEBUG': {
+                console.debug(message);
+                break;
+            }
+            case 'INFO': {
+                console.log(message);
+                break;
+            }
+            case 'WARN': {
+                console.warn(message);
+                break;
+            }
+            case 'ERROR': {
+                console.error(message);
+                break;
+            }
+            case 'DEBUG_AUTO': {
+                console.debug(message);
+                break;
+            }
+            default: {
+                console.log(message);
+            }
+        }
+        // 這裡可改成 file 或 server
     }
 
     /**
@@ -69,6 +94,17 @@ export class Logger {
     }
 
     /**
+     * 處理參數數量錯誤
+     * @private
+     * @param {string} funcName - 函數名稱
+     * @param {string} msg - 參數描述
+     */
+    errorHandler(funcName, msg) {
+        this.error(`Logger.${funcName} ${msg}`);
+        throw new Error(`Logger.${funcName} ${msg}`);
+    }
+
+    /**
      * 根據日誌等級輸出訊息
      * @private
      * @param {string} level - 日誌等級
@@ -76,7 +112,7 @@ export class Logger {
      */
     log(level, message) {
         if (loggerManager.shouldLog(level)) {
-            loggerManager.output(this.format(level, message));
+            loggerManager.output(level, this.format(level, message));
         }
     }
 
@@ -85,7 +121,7 @@ export class Logger {
      * @param {string} message - 日誌訊息
      */
     debug(message) {
-        if (arguments.length !== 1) throw new Error('Logger.debug expects exactly one argument (message)');
+        if (arguments.length !== 1) this.errorHandler('debug', 'expects exactly one argument');
         this.log('DEBUG', message);
     }
 
@@ -94,7 +130,7 @@ export class Logger {
      * @param {string} message - 日誌訊息
      */
     info(message) {
-        if (arguments.length !== 1) throw new Error('Logger.info expects exactly one argument (message)');
+        if (arguments.length !== 1) this.errorHandler('info', 'expects exactly one argument');
         this.log('INFO', message);
     }
 
@@ -103,7 +139,7 @@ export class Logger {
      * @param {string} message - 日誌訊息
      */
     warn(message) {
-        if (arguments.length !== 1) throw new Error('Logger.warn expects exactly one argument (message)');
+        if (arguments.length !== 1) this.errorHandler('warn', 'expects exactly one argument');
         this.log('WARN', message);
     }
 
@@ -112,10 +148,13 @@ export class Logger {
      * @param {string} message - 日誌訊息
      */
     error(message) {
-        if (arguments.length !== 1) throw new Error('Logger.error expects exactly one argument (message)');
+        if (arguments.length !== 1) this.errorHandler('error', 'expects exactly one argument');
         this.log('ERROR', message);
     }
-    debugA() {
-        this.log('DEBUG_AUTO', `Auto debug message #${++this.debug_auto_counter}`);
+
+    debugA(message) {
+        this.log('DEBUG_AUTO', `Auto debug #${++this.debug_auto_counter},\n {${message}}`);
     }
+
+
 }

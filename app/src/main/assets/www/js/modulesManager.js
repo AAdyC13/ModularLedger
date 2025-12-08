@@ -6,7 +6,7 @@ export class ModulesManager {
         this.logger = logger;
         this.bridge = bridge;
         this.eventAgent = eventAgent;
-        this.moduleList = null;
+        this.moduleDict = null;
         this.whitelist = whitelist || [];
         this.logger.debug(`Whitelist set: ${this.whitelist.join(', ')}`);
         this.schemaLoadFailed = false;
@@ -16,6 +16,9 @@ export class ModulesManager {
      * 初始化模組管理器
      */
     init(logger_forModule) {
+        this.eventAgent.on('CM:analysis_complete', this.handleAnalysisComplete.bind(this));
+        this.eventAgent.on('EM:analysis_complete', this.handleAnalysisComplete.bind(this));
+        this.eventAgent.on('PM:analysis_complete', this.handleAnalysisComplete.bind(this));
         try {
             const schema = this.bridge.callSync('getSchema', 'module-info.schema');
             const techSchema = this.bridge.callSync('getSchema', 'module-tech.schema');
@@ -28,10 +31,35 @@ export class ModulesManager {
         }
 
         this.loadSystemModules();
-        const summaries = this.moduleList
+        const summaries = Object.values(this.moduleDict)
             .map(m => `  - ${m.getSummary()}`)
             .join('\n');
-        this.logger.debug(`System modules loaded: ${this.moduleList.length} modules\n${summaries}`);
+        this.logger.debug(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
+    }
+    handleAnalysisComplete(data) {
+        const modID = data.modID;
+        //this.logger.debug(`Handling analysis complete for module: ${modID}`);
+        const sys = data.sysName;
+        const mod = this.moduleDict[modID];
+        if (!mod) {
+            this.logger.warn(`Module ${modID} not found in moduleDict`);
+            return;
+        }
+        switch (sys) {
+            case 'ElementManager':
+                mod.status.EM_ready = true;
+                break;
+            case 'ComponentManager':
+                mod.status.CM_ready = true;
+                break;
+            case 'PageManager':
+                mod.status.PM_ready = true;
+                break;
+            default:
+                this.logger.warn(`Unknown system name in analysis complete: ${sys}`);
+                return;
+        }
+        //this.logger.debug(`Module analysis complete: ${modID} from system: ${sys}`);
     }
 
     /**
@@ -51,12 +79,12 @@ export class ModulesManager {
 
             if (!list) {
                 this.logger.warn('Failed to get system modules list from Android');
-                this.moduleList = [];
+                this.moduleDict = {};
                 return;
             }
 
             // 將每個模組資料轉換為 Module 實例
-            this.moduleList = [];
+            this.moduleDict = {};
             list.forEach(data => {
                 try {
                     // 如果 Schema 載入失敗,只載入白名單模組
@@ -68,13 +96,13 @@ export class ModulesManager {
                         // 白名單模組跳過驗證
                         this.logger.warn(`Loading whitelisted module ${data.id} without validation`);
                         const module = new Module(data, true);
-                        this.moduleList.push(module);
+                        this.moduleDict[module.id] = module;
                         return;
                     }
 
                     // 正常載入並驗證模組
                     const module = new Module(data);
-                    this.moduleList.push(module);
+                    this.moduleDict[module.id] = module;
                 } catch (error) {
                     this.logger.error(`Failed to load module ${data.id || 'unknown'}: ${error.message}`);
                 }
@@ -82,47 +110,40 @@ export class ModulesManager {
 
         } catch (error) {
             this.logger.error('Error parsing system modules list: ' + error);
-            this.moduleList = [];
+            this.moduleDict = {};
         }
     }
 
-    enableSystemModules() {
-        this.logger.debug('Start trying to enable All System modules');
+    async enableSystemModules() {
         const modIds = new Set(this.getPrefixedIds('system'));
         this.logger.debug(`System module IDs to enable: ${Array.from(modIds).join(', ')}`);
-        this.enableModules(modIds);
-        this.logger.debug('Finish trying to enable All System modules');
+        await this.enableModules(modIds);
     }
 
     /**
-     * 啟用模組（支援多筆查詢）
+     * 啟用模組
      * @param {Set} modIds - 要啟動的 Idset
-     * @returns {Array<Object>} Enabling modules: { id, status, message? }
      */
-    enableModules(modIds) {
-        let counter = 0;
-        this.logger.debug(`Enabling modules: ${Array.from(modIds).join(', ')}`);
+    async enableModules(modIds) {
+        const totalMods = modIds.size;
+        const ans = this.monitorModuleLoading.bind(this)(modIds);
         try {
             const mods = this.modFindByIds(modIds)
             const filenNames = mods.map(m => m.folderName);
             const techs = this.bridge.callSync('getTechs', filenNames);
-
             mods.forEach((mod) => {
                 try {
                     const techData = techs[mod.folderName];
                     if (techData) {
                         mod.loadTech(techData);
                         // 其他啟用邏輯在此添加
-                        this.eventAgent.emit('Module_enabled', {
+                        this.eventAgent.emit('MM:Module_enabled', {
                             id: mod.id,
                             //警告! 這裡越過了mod.tech檢查，直接用techData
                             tech: techData,
                             folderName: mod.folderName
                         });
-
-
-                        this.logger.info(`Module enabled: ${mod.id}`);
-                        counter++;
+                        this.logger.debug(`Enabling module: ${mod.id}`);
                     }
                 } catch (error) {
                     this.logger.error(`Failed to loadTech for module: ${mod.id}: ` + error);
@@ -131,7 +152,63 @@ export class ModulesManager {
         } catch (error) {
             this.logger.error(`Error enabling module: ` + error);
         }
-        this.logger.info(`Total modules enabled: ${counter}`);
+        const unable = await ans;
+        if (unable.size > 0) {
+
+            // 警告! 超時，這裡應該要阻止部分模組的啟動過程
+
+            this.logger.warn(`Some modules failed to enable within timeout: ${Array.from(unable).join(', ')}`);
+        }
+        const num = totalMods - unable.size;
+        const word = num === 1 || num === 0 ? 'module' : 'modules';
+        this.eventAgent.emit('MM:Module_fully_enabled', { id: null }); // 暫時，強制 reset all pages
+        this.logger.info(`Successfully enabled ${num} ${word}.`);
+    }
+    /**
+     * 監視模組啟動狀態
+     * @param {Set} modIds - 要啟動的 Idset
+     * @returns {Promise<Set>} 返回未完成的模組 ID Set，如果全部完成則為空 Set
+     */
+    async monitorModuleLoading(modIds) {
+        //const totalMods = modIds.size;
+        const checkInterval = 50; // 毫秒
+        const timeout = 10000; // 最長等待時間，10 秒
+        let elapsed = 0;
+
+        return new Promise((resolve, reject) => {
+            const intervalId = setInterval(() => {
+                const toRemove = new Set();
+
+                for (const modId of modIds) {
+                    const mod = this.moduleDict[modId];
+                    if (mod && mod.status.EM_ready && mod.status.CM_ready && mod.status.PM_ready) {
+                        toRemove.add(modId);
+                    }
+                }
+
+                if (toRemove.size > 0) {
+                    for (const id of toRemove) {
+                        this.logger.debug(`Module fully enabled: ${id}`);
+                        
+                        // 警告! 目前由於Page不來自模組，所以兩者沒有關聯性，將在enableModules() 強制reset all pages
+                        //this.eventAgent.emit('MM:Module_fully_enabled', { id });
+
+                        modIds.delete(id);
+                    }
+                }
+
+                if (modIds.size === 0) {
+                    clearInterval(intervalId);
+                    resolve(new Set()); // 全部模組完成，返回空 Set
+                }
+
+                elapsed += checkInterval;
+                if (elapsed >= timeout) {
+                    clearInterval(intervalId);
+                    resolve(modIds); // 返回剩餘未完成的模組 ID Set
+                }
+            }, checkInterval);
+        });
     }
 
     /**
@@ -141,9 +218,9 @@ export class ModulesManager {
      */
     modFindByIds(modIds) {
         const matchedMods = [];
-        for (let mod of this.moduleList) {
-            if (modIds.has(mod.id)) {
-                matchedMods.push(mod);
+        for (const id of modIds) {
+            if (this.moduleDict[id]) {
+                matchedMods.push(this.moduleDict[id]);
             }
         }
         return matchedMods;
@@ -154,7 +231,7 @@ export class ModulesManager {
      * @returns {Array<string>}
      */
     getPrefixedIds(prefix) {
-        return this.moduleList
+        return Object.values(this.moduleDict)
             .filter(m => m && typeof m.id === 'string' && m.id.startsWith(prefix + '.'))
             .map(m => m.id);
     }
@@ -212,6 +289,9 @@ class Module {
         this.status = {
             enabled: false,
             techLoaded: false,
+            EM_ready: false,
+            CM_ready: false,
+            PM_ready: false
         }
 
         // 標記是否為白名單模組(未經驗證)

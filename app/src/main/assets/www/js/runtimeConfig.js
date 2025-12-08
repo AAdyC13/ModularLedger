@@ -10,7 +10,7 @@ const runtimeConfig = {
      */
     whitelist: [
         'system.HomePage',
-        'system.Record'
+        'system.Recorder'
     ],
     layoutIDs: {
         'tcb': 'tcb-layout',
@@ -24,7 +24,7 @@ const runtimeConfig = {
     },
     preLoadPages: [
         { pageID: 'systemPage.Home', layoutID: 'tcb' },
-        { pageID: 'systemPage.Record', layoutID: 'full' },
+        { pageID: 'systemPage.Recorder', layoutID: 'full' },
         { pageID: 'systemPage.Settings', layoutID: 'drawer' },
         { pageID: 'systemPage.Accounts', layoutID: 'tabs' },
         { pageID: 'systemPage.Searcher', layoutID: 'search' }

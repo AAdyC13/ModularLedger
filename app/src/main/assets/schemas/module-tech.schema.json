@@ -22,7 +22,7 @@
 						"type": "string",
 						"enum": [
 							"systemPage.Home",
-							"systemPage.Record",
+							"systemPage.Recorder",
 							"systemPage.Settings",
 							"systemPage.Accounts",
 							"systemPage.Searcher"
@@ -50,7 +50,7 @@
 					"name": { "type": "string", "description": "component 名稱" },
 					"type": {
 						"type": "string",
-						"enum": ["Panel", "Logic", "Service"],
+						"enum": ["Panel", "Logic"],
 						"description": "component 類型"
 					},
 					"entry": {

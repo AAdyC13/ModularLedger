@@ -1,13 +1,3 @@
-/**
- * Next-generation component management with lifecycle governance.
- * Provides a registry-based API for creating, mounting, updating, and recycling components.
- */
-
-import { COMPONENTS } from '../config/resources.js';
-import { SettingPanel } from '../components/SettingPanel/SettingPanel.js';
-import { Calculator } from '../components/Calculator/Calculator.js';
-import { ScrollController } from '../components/ScrollController/ScrollController.js';
-import { RecordCalendar } from '../components/RecordCalendar/RecordCalendar.js';
 
 const SHADOW_SUPPORTED = typeof HTMLElement !== 'undefined' && !!HTMLElement.prototype.attachShadow;
 const GLOBAL_OBJECT = typeof globalThis !== 'undefined' ? globalThis : window;
@@ -412,7 +402,7 @@ export class ComponentManager {
 
     }
     init() {
-        this.eventAgent.on("Module_enabled", this.analysisBlueprint.bind(this));
+        this.eventAgent.on("MM:Module_enabled", this.analysisBlueprint.bind(this));
     }
     analysisBlueprint(data) {
         const modID = data.id;

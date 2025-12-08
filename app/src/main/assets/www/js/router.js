@@ -10,19 +10,19 @@ export class Router {
     }
 
     init() {
-        try {
-            this.eventAgent.on('Finish_preloade_page', this.addPageToCache.bind(this));
 
-            this.eventAgent.on('Del_preloade_page', (PEid) => {
-                delete this.pageCaches[PEid];
-                this.logger.debug(`Page deleted from cache: [${PEid}]`);
-            });
-            this.eventAgent.on('Index_page_is', this.indexPageIs.bind(this));
+        this.eventAgent.on('PM:Finish_preloade_page', this.addPageToCache.bind(this));
 
-        } catch (error) {
-            this.logger.error(`Router init failed: ${error}`);
-            throw error;
-        }
+        this.eventAgent.on('PM:Del_preloade_page', (PEid) => {
+            delete this.pageCaches[PEid];
+            this.logger.debug(`Page deleted from cache: [${PEid}]`);
+        });
+        this.eventAgent.on('RT::Index_page_is', this.indexPageIs.bind(this));
+        this.eventAgent.on('EM:navigate', this.proxyNavigate.bind(this));
+
+    }
+    async proxyNavigate(data) {
+        await this.navigate(data.pageID, data.options);
     }
     addPageToCache(PE) {
         // this.logger.debug(`Adding page to cache: ${PE.id}`);
@@ -61,7 +61,14 @@ export class Router {
             // 2. 從快取讀取頁面 HTML（永遠不 fetch），如果沒有則等待最多1秒
             let next_page = this.pageCaches[pageID];
             if (!next_page) {
-                next_page = await this.waitForPage(pageID);
+                try {
+                    this.logger.debug(`Page not in cache, waiting to load: ${pageID}`);
+                    next_page = await this.waitForPage(pageID);
+                } catch (err) {
+                    // 警告! router.pageCaches沒有這一頁，不進行導航，未來可新增alrt告知用戶
+                    this.logger.error(`Page not preloaded, cannot navigate: ${pageID}`);
+                    return;
+                }
             }
             this.logger.debug(`Loaded page from cache: ${pageID}`);
 
@@ -71,6 +78,7 @@ export class Router {
 
             // 4. 更新 DOM
             app.replaceChildren(next_page);
+            this.eventAgent.emit('Router:Finish_navigate', pageID, {});
 
             // 6. 記錄當前頁面（WebView 環境不需要修改 URL）
             this.currentPage = next_page;
@@ -107,7 +115,7 @@ export class Router {
     }
 
     async start() {
-        this.eventAgent.emit('Router_Starting', this.indexPage, {});
+        this.eventAgent.emit('Router:Starting', this.indexPage, {});
         await this.eventAgent.callMeBack();
 
         this.logger.debug(`Starting navigation to index page: ${this.indexPage}`);

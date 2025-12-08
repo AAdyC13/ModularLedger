@@ -2,56 +2,61 @@
  * Record Calendar Component
  * 記帳日曆組件 - 負責渲染首頁主要內容區域
  */
-export class RecordCalendar {
-    constructor(template) {
-        this.template = template;
+export default class RecordCalendar {
+    constructor() {
+        this.Agent = null;
         this.container = null;
+        this.eventPlatform = null;
         // 模擬後端數據 [年, 月, 日, 支出, 收入]
         this.jsonData = [
-            [2024, 6, 1, 1200, 150],
-            [2024, 7, 2, 800, 80],
-            [2024, 7, 3, 950, 100],
-            [2024, 8, 4, 1100, 120],
-            [2024, 10, 5, 700, 70],
-            [2024, 11, 15, 500, 200],
-            [2024, 11, 16, 300, 0],
-            [2024, 11, 19, 850, 150]
+            [2025, 11, 28, 150, 0],  // 支出
+            [2025, 11, 28, 0, 200],  // 收入
+            [2025, 11, 28, 75, 0],   // 支出
+            [2025, 11, 29, 300, 0],  // 支出
+            [2025, 11, 29, 0, 120],  // 收入
+            [2025, 11, 30, 450, 0],  // 支出
+            [2025, 11, 30, 0, 80],   // 收入
+            [2025, 11, 30, 220, 0],  // 支出
+            [2025, 12, 1, 0, 350],   // 收入
+            [2025, 12, 1, 180, 0],   // 支出
+            [2025, 12, 1, 0, 90],    // 收入
+            [2025, 12, 2, 400, 0],   // 支出
+            [2025, 12, 2, 0, 250],   // 收入
+            [2025, 12, 2, 50, 0]     // 支出
         ];
-
-        this.currentYear = new Date().getFullYear();
-        this.currentMonth = new Date().getMonth() + 1; // 1-12
         this.selectedDate = null;
         this.eventListeners = [];
         this.currentView = 'calendar'; // 'calendar' or 'list'
+
+    }
+    init(Agent) {
+        this.Agent = Agent;
+        this.logger = Agent.tools.logger;
+        this.eventPlatform = Agent.eventPlatform;
+        this.container = Agent.myDOM.querySelector(".home-calendar-view");
+        this.currentYear = new Date().getFullYear();
+        this.currentMonth = new Date().getMonth() + 1; // 1-12
+        if (!this.container) {
+            this.logger.error('RecordCalendar container not found!');
+            return false;
+        }
+        this.setEvents();
+        this.render();
+        this.logger.debug(`RecordCalendar initialized`);
+        return true;
+    }
+    setEvents() {
+        this.eventPlatform.on("doCalendar_calendar", () => this.switchView('calendar'));
+        this.eventPlatform.on("doCalendar_list", () => this.switchView('list'));
     }
 
-    /**
-     * 渲染組件到指定容器
-     * @param {string|HTMLElement} target - 目標容器的選擇器或 DOM 元素
-     */
-    render(target) {
-        // 獲取容器元素
-        if (typeof target === 'string') {
-            this.container = document.querySelector(target);
-        } else {
-            this.container = target;
-        }
-
-        if (!this.container) {
-            console.error('RecordCalendar: Target container not found');
-            return;
-        }
-
-        // 渲染模板
-        this.container.innerHTML = this.template;
-
+    render() {
         // 初始化日曆
         this.initCalendar();
 
         // 根據當前視圖顯示內容
         this.switchView(this.currentView);
-
-        console.log('✓ RecordCalendar rendered');
+        this.logger.debug(`RecordCalendar rendered`);
     }
 
     /**
@@ -69,8 +74,8 @@ export class RecordCalendar {
      * 綁定月份切換按鈕
      */
     bindMonthNavigation() {
-        const prevBtn = document.getElementById('prev-month-btn');
-        const nextBtn = document.getElementById('next-month-btn');
+        const prevBtn = this.container.querySelector('#prev-month-btn');
+        const nextBtn = this.container.querySelector('#next-month-btn');
 
         if (prevBtn) {
             const prevHandler = (e) => {
@@ -121,7 +126,7 @@ export class RecordCalendar {
      * 更新月份標題
      */
     updateMonthTitle() {
-        const monthTitle = document.getElementById('current-month');
+        const monthTitle = this.container.querySelector('#current-month');
         if (monthTitle) {
             monthTitle.textContent = `${this.currentYear}年${this.currentMonth}月`;
         }
@@ -132,7 +137,7 @@ export class RecordCalendar {
      */
     renderCalendar() {
         // 獲取日曆網格
-        const grid = document.getElementById('calendar-grid');
+        const grid = this.container.querySelector('#calendar-grid');
         if (!grid) return;
 
         // 清空舊的日期格子
@@ -197,11 +202,11 @@ export class RecordCalendar {
         this.selectedDate = { year, month, day };
 
         // 更新選中狀態
-        document.querySelectorAll('.calendar-day').forEach(cell => {
+        this.container.querySelectorAll('.calendar-day').forEach(cell => {
             cell.classList.remove('selected');
         });
 
-        const selectedCell = document.querySelector(`[data-date="${year}-${month}-${day}"]`);
+        const selectedCell = this.container.querySelector(`[data-date="${year}-${month}-${day}"]`);
         if (selectedCell) {
             selectedCell.classList.add('selected');
         }
@@ -214,8 +219,8 @@ export class RecordCalendar {
      * 顯示指定日期的記錄
      */
     displayRecords(year, month, day) {
-        const dateHeader = document.getElementById('selected-date');
-        const recordsList = document.getElementById('records-list');
+        const dateHeader = this.container.querySelector('#selected-date');
+        const recordsList = this.container.querySelector('#records-list');
 
         if (!dateHeader || !recordsList) return;
 
@@ -258,8 +263,8 @@ export class RecordCalendar {
      * 渲染月份清單視圖
      */
     renderMonthList() {
-        const dateHeader = document.getElementById('selected-date');
-        const recordsList = document.getElementById('records-list');
+        const dateHeader = this.container.querySelector('#selected-date');
+        const recordsList = this.container.querySelector('#records-list');
 
         if (!dateHeader || !recordsList) return;
 
@@ -315,7 +320,10 @@ export class RecordCalendar {
             // 顯示日曆視圖（上下分割）
             if (monthSelector) monthSelector.style.display = 'flex';
             if (calendarContainer) calendarContainer.style.display = 'flex';
-            if (recordsContainer) recordsContainer.style.display = 'flex';
+            if (recordsContainer) {
+                recordsContainer.style.display = 'flex';
+                recordsContainer.classList = 'records-container calendar';
+            }
             if (divider) divider.style.display = 'block';
 
             // 渲染日曆
@@ -325,13 +333,14 @@ export class RecordCalendar {
             if (monthSelector) monthSelector.style.display = 'flex';
             if (calendarContainer) calendarContainer.style.display = 'none';
             if (divider) divider.style.display = 'none';
-            if (recordsContainer) recordsContainer.style.display = 'flex';
+            if (recordsContainer) {
+                recordsContainer.classList = 'records-container list';
+                recordsContainer.style.display = 'flex';
+            }
 
             // 渲染月份清單
             this.renderMonthList();
         }
-
-        console.log(`✓ RecordCalendar view switched to: ${view}`);
     }
 
     /**

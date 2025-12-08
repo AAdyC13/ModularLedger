@@ -1,9 +1,0 @@
-{
-	"name": "New Record",
-	"id": "system.Record",
-	"version": "1.0.0",
-	"author": "admin",
-	"description": "模組化記帳系統 - New Record",
-	"module license": "MIT",
-	"tags": ["finance", "recorder", "UI"]
-}

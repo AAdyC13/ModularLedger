@@ -14,10 +14,14 @@
 }
 
 /* ==========================================
-   主要布局結構 - 三段式佈局
+   主要布局結構 - tcb-layout
    ========================================== */
-
-.page-header {
+.tcb-layout {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+.tcb-layout .page-header {
 	height: 8vh;
 	display: flex;
 	align-items: center;
@@ -27,10 +31,12 @@
 	padding: 0;
 }
 
-.page-content {
+.tcb-layout .page-content {
 	height: 84vh;
+	max-height:100%;
 	flex: 1;
 	overflow: hidden;
+	overflow-y: auto;
 	padding: 0;
 	display: flex;
 	flex-direction: row;
@@ -38,7 +44,7 @@
 	justify-content: flex-start;
 }
 
-.page-footer {
+.tcb-layout .page-footer {
 	height: 8vh;
 	display: flex;
 	align-items: center;
@@ -46,6 +52,240 @@
 	background: var(--bg-card);
 	border-top: 1px solid var(--text-secondary);
 	padding: 0;
+}
+
+/* 從此處開始添加layout樣式 */
+
+/* ==========================================
+   bottom-nav-layout
+   ========================================== */
+
+.bottom-nav-layout {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.bottom-nav-layout .page-header {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.bottom-nav-layout .page-content {
+	flex: 1;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+}
+
+.bottom-nav-layout .bottom-navigation {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: space-around;
+	background: var(--bg-card);
+	border-top: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+/* ==========================================
+   drawer-layout
+   ========================================== */
+
+.drawer-layout {
+	display: flex;
+	height: 100vh;
+}
+
+.drawer-layout .side-drawer {
+	width: 250px;
+	background: var(--bg-secondary);
+	transition: transform 0.3s ease;
+}
+
+.drawer-layout .side-drawer.hidden {
+	transform: translateX(-100%);
+}
+
+.drawer-layout .drawer-main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+}
+
+.drawer-layout .drawer-main .page-header {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.drawer-layout .drawer-main .page-content {
+	flex: 1;
+	overflow: hidden;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+}
+
+/* ==========================================
+   tab-layout
+   ========================================== */
+
+.tab-layout {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.tab-layout .page-header {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.tab-layout .tab-bar {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.tab-layout .tab-content {
+	flex: 1;
+	overflow: auto;
+	padding: var(--spacing-lg);
+}
+
+/* ==========================================
+   fullscreen-layout
+   ========================================== */
+
+.fullscreen-layout {
+	height: 100vh;
+}
+
+.fullscreen-layout .page-content {
+	height: 100vh;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+}
+
+/* ==========================================
+   search-layout
+   ========================================== */
+
+.search-layout {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.search-layout .page-header {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.search-layout .search-bar {
+	width: 100%;
+	padding: var(--spacing-md);
+	background: var(--bg-primary);
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+}
+
+.search-layout .page-content {
+	flex: 1;
+	overflow: auto;
+	padding: var(--spacing-lg);
+}
+
+/* ==========================================
+   master-detail-layout
+   ========================================== */
+
+.master-detail-layout {
+	display: flex;
+	height: 100vh;
+}
+
+.master-detail-layout .master-list {
+	width: 30%;
+	background: var(--bg-secondary);
+	overflow: auto;
+	padding: var(--spacing-lg);
+	border-right: 1px solid var(--text-secondary);
+}
+
+.master-detail-layout .detail-content {
+	flex: 1;
+	padding: var(--spacing-lg);
+	overflow: auto;
+}
+
+/* ==========================================
+   wizard-layout
+   ========================================== */
+
+.wizard-layout {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.wizard-layout .step-indicator {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--bg-card);
+	border-bottom: 1px solid var(--text-secondary);
+	padding: 0;
+}
+
+.wizard-layout .page-content {
+	flex: 1;
+	overflow: auto;
+	padding: var(--spacing-lg);
+}
+
+.wizard-layout .wizard-footer {
+	height: 8vh;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	background: var(--bg-card);
+	border-top: 1px solid var(--text-secondary);
+	padding: 0 var(--spacing-lg);
 }
 
 /* ==========================================

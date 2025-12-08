@@ -12,11 +12,7 @@ import { ModulesManager } from './modulesManager.js';
 import { PageManager } from './pageManager.js';
 import { ElementManager } from './elementManager.js';
 import { Router } from './router.js';
-
-// import { ComponentManager } from './componentManager.js';
-
-
-
+import { ComponentManager } from './componentManager.js';
 
 class Runtime {
     constructor() {
@@ -84,10 +80,11 @@ class Runtime {
             );
             this.logger.debug('Router build successfully');
 
-            // const componentManager = new ComponentManager({
-            //     logger: new Logger('ComponentManager'),
-            //     eventHub,
-            // });
+            const componentManager = new ComponentManager(
+                new Logger('ComponentManager'),
+                eventHub.createAgent('ComponentManager'),
+                bridge
+            );
 
             // --------------------------------------------
             // 3. 並行初始化可 async import 的管理器
@@ -98,6 +95,7 @@ class Runtime {
                 pageManager.init(runtimeConfig.preLoadPages || []),
                 elementManager.init(),
                 router.init(),
+                componentManager.init(),
             ]);
             this.logger.debug('All System initialized');
 
@@ -108,12 +106,12 @@ class Runtime {
             if (!runtimeConfig.indexPage) {
                 throw new Error('indexPage is not defined in runtimeConfig');
             }
-            //this.eventAgent.emit('Index_page_is', runtimeConfig.indexPage, {});
+            //this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
             router.indexPageIs(runtimeConfig.indexPage);
 
-            modulesManager.enableSystemModules();
+            await modulesManager.enableSystemModules();
 
-            
+
 
 
             // --------------------------------------------

@@ -1,17 +1,13 @@
-/**
- * New Record Page
- * 記帳頁面邏輯 - 支援支出/收入/轉帳三種模式
- */
-import { BasePage } from './BasePage.js';
-
-export class NewRecordPage extends BasePage {
-    constructor(router) {
-        super(router);
-        this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
-        this.scrollController = null;
+export default class Recorder {
+    constructor() {
+        this.Agent = null;
+        this.container = null;
+        this.eventPlatform = null;
         this.recordMain = null;
+
+        this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
+
         this.recordForm = null;
-        this.recordScrollbarThumb = null;
 
         // 定義各模式的欄位配置
         this.formConfigs = {
@@ -54,21 +50,19 @@ export class NewRecordPage extends BasePage {
         this.fieldIdMap = {};
     }
 
-    /**
-     * 初始化頁面
-     */
-    async init() {
-        await super.init();
-
-        // 獲取 DOM 引用
-        this.recordMain = document.getElementById('record-main');
-        this.recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
-
-        // 綁定事件
-        this.bindEvents();
-
-        // 載入默認子介面（支出）
-        await this.loadSubInterface(0);
+    async init(Agent) {
+        this.Agent = Agent;
+        this.logger = Agent.tools.logger;
+        this.eventPlatform = Agent.eventPlatform;
+        this.recordMain = Agent.myDOM.querySelector("#record-main");
+        if (!this.recordMain) {
+            this.logger.error('Recorder container not found!');
+            return false;
+        }
+        this.bindEvents(); // 綁定事件
+        await this.loadSubInterface(0); // 載入默認子介面（支出）
+        this.logger.debug(`Recorder initialized`);
+        return true;
     }
 
     /**
@@ -76,16 +70,16 @@ export class NewRecordPage extends BasePage {
      */
     bindEvents() {
         // 返回按鈕
-        const backBtn = document.getElementById('back-btn');
+        const backBtn = this.recordMain.querySelector("#back-btn");
         if (backBtn) {
             this.addEventListener(backBtn, 'click', (e) => {
                 e.preventDefault();
-                this.navigate('pages/home.html');
+                // this.navigate('pages/home.html');
             });
         }
 
         // 儲存按鈕
-        const saveBtn = document.getElementById('save-btn');
+        const saveBtn = this.recordMain.querySelector("#save-btn");
         if (saveBtn) {
             this.addEventListener(saveBtn, 'click', (e) => {
                 e.preventDefault();
@@ -94,7 +88,7 @@ export class NewRecordPage extends BasePage {
         }
 
         // 再記一筆按鈕
-        const addAnotherBtn = document.getElementById('add-another-btn');
+        const addAnotherBtn = this.recordMain.querySelector("#add-another-btn");
         if (addAnotherBtn) {
             this.addEventListener(addAnotherBtn, 'click', (e) => {
                 e.preventDefault();
@@ -103,7 +97,7 @@ export class NewRecordPage extends BasePage {
         }
 
         // 記錄類型按鈕
-        const typeBtns = document.querySelectorAll('.record-type-btn');
+        const typeBtns = this.recordMain.querySelectorAll('.record-type-btn');
         typeBtns.forEach(btn => {
             this.addEventListener(btn, 'click', async (e) => {
                 e.preventDefault();
@@ -118,7 +112,7 @@ export class NewRecordPage extends BasePage {
         });
 
         // 暫存按鈕
-        const tempSaveBtn = document.getElementById('temp-save-btn');
+        const tempSaveBtn = this.recordMain.querySelector('#temp-save-btn');
         if (tempSaveBtn) {
             this.addEventListener(tempSaveBtn, 'click', (e) => {
                 e.preventDefault();
@@ -131,7 +125,7 @@ export class NewRecordPage extends BasePage {
      * 更新記錄類型按鈕狀態
      */
     updateRecordTypeButtons() {
-        document.querySelectorAll('.record-type-btn').forEach(btn => {
+        this.recordMain.querySelectorAll('.record-type-btn').forEach(btn => {
             const btnType = parseInt(btn.dataset.type);
             if (btnType === this.recordType) {
                 btn.classList.add('active');
@@ -154,13 +148,8 @@ export class NewRecordPage extends BasePage {
 
         // 保存舊的表單元素
         const oldForm = this.recordForm;
-        const oldScrollbar = this.recordScrollbarThumb ? this.recordScrollbarThumb.parentElement : null;
 
-        // 清理舊的 ScrollController（但保留 DOM 用於動畫）
-        if (this.scrollController) {
-            this.scrollController.destroy();
-            this.scrollController = null;
-        }
+
 
         // 重置 ID 映射
         this.fieldIdMap = {};
@@ -170,35 +159,23 @@ export class NewRecordPage extends BasePage {
 
         // 創建新表單容器
         const newFormContainer = document.createElement('div');
-        newFormContainer.style.position = 'absolute';
-        newFormContainer.style.top = '0';
-        newFormContainer.style.left = '0';
-        newFormContainer.style.width = '100%';
-        newFormContainer.style.height = '100%';
+        newFormContainer.classList.add('absolute-full');
         newFormContainer.innerHTML = `
             <div class="record-form" id="record-form">
                 ${formHtml}
-            </div>
-            <div class="record-scrollbar">
-                <div class="record-scrollbar-thumb" id="record-scrollbar-thumb"></div>
-            </div>
-        `;
+            </div>`;
 
         // 確保 record-main 使用相對定位
-        this.recordMain.style.position = 'relative';
+        this.recordMain.classList.add('relative');
 
         // 如果是首次載入，直接替換內容
         if (!oldForm) {
             this.recordMain.innerHTML = '';
             this.recordMain.appendChild(newFormContainer);
-            newFormContainer.style.position = 'static';
+            newFormContainer.classList.add('static');
 
             // 重新獲取 DOM 引用
-            this.recordForm = document.getElementById('record-form');
-            this.recordScrollbarThumb = document.getElementById('record-scrollbar-thumb');
-
-            // 初始化滾動
-            this.initScroll();
+            this.recordForm = this.recordMain.querySelector('#record-form');
 
             // 初始化計算機
             await this.initCalculator();
@@ -206,15 +183,10 @@ export class NewRecordPage extends BasePage {
         }
 
         // 將舊表單設為絕對定位
-        if (oldForm && oldScrollbar) {
+        if (oldForm) {
             const oldContainer = document.createElement('div');
-            oldContainer.style.position = 'absolute';
-            oldContainer.style.top = '0';
-            oldContainer.style.left = '0';
-            oldContainer.style.width = '100%';
-            oldContainer.style.height = '100%';
+            oldContainer.classList.add('absolute-full');
             oldContainer.appendChild(oldForm);
-            oldContainer.appendChild(oldScrollbar);
             this.recordMain.appendChild(oldContainer);
 
             // 添加退出動畫
@@ -237,15 +209,13 @@ export class NewRecordPage extends BasePage {
         // 動畫結束後移除動畫 class 並恢復靜態定位
         setTimeout(() => {
             newFormContainer.classList.remove('page-enter-slide-left', 'page-enter-slide-right');
-            newFormContainer.style.position = 'static';
+            newFormContainer.classList.add('static');
         }, 300);
 
         // 重新獲取 DOM 引用
         this.recordForm = newFormContainer.querySelector('.record-form');
-        this.recordScrollbarThumb = newFormContainer.querySelector('.record-scrollbar-thumb');
 
-        // 初始化滾動
-        this.initScroll();
+
 
         // 初始化計算機（金額欄位）
         await this.initCalculator();
@@ -277,7 +247,7 @@ export class NewRecordPage extends BasePage {
             const fieldId = this.generateFieldId(type, index, field);
             const inputHtml = this.generateFieldInput(field, fieldId);
             return `
-                <div class="form-group" style="height: 25%;">
+                <div class="form-group record-field">
                     <label for="${fieldId}">${field.name}</label>
                     ${inputHtml}
                 </div>
@@ -335,22 +305,7 @@ export class NewRecordPage extends BasePage {
         }
     }
 
-    /**
-     * 初始化滾動
-     */
-    initScroll() {
-        if (!this.recordMain || !this.recordForm || !this.recordScrollbarThumb) return;
 
-        // 通過組件管理器創建 ScrollController 實例
-        if (this.router && this.router.componentsManager) {
-            this.scrollController = this.router.componentsManager.createComponent(
-                'scrollController',
-                this.recordMain,
-                this.recordForm,
-                this.recordScrollbarThumb
-            );
-        }
-    }
 
     /**
      * 儲存記錄
@@ -383,12 +338,5 @@ export class NewRecordPage extends BasePage {
      * 頁面銷毀（cache: false 時調用）
      */
     destroy() {
-        // 清理 ScrollController
-        if (this.scrollController) {
-            this.scrollController.destroy();
-            this.scrollController = null;
-        }
-
-        super.destroy();
     }
 }

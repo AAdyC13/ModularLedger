@@ -1,0 +1,9 @@
+{
+	"name": "Recorder page builder",
+	"id": "system.Recorder",
+	"version": "1.0.0",
+	"author": "admin",
+	"description": "模組化記帳系統 - 建構記帳頁面",
+	"module license": "MIT",
+	"tags": ["system"]
+}

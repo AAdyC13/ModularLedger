@@ -37,7 +37,9 @@ class EventHub {
         // 這邊還可以優化，讓同一個agent box存所有handler，而不是每次on都new一個box
 
         this.listeners[eventName].push(box);
+
         // this.logger.debug(` Agent [${agent.name}] Handler registered for event: ${eventName}`);
+
         // Sticky replay
         if (eventName in this.sticky) {
             box.handler(this.sticky[eventName]);
@@ -47,7 +49,9 @@ class EventHub {
 
     // 發送事件
     emit(eventName, payload, options = {}, agent = new EventAgent("unknownAgent")) {
-        this.logger.debug(`Agent [${agent.name}] emit: [${eventName}: ${payload}]`);
+
+        //this.logger.debug(`Agent [${agent.name}] emit: [${eventName}: ${payload}]`);
+
         // Sticky
         if (options.sticky) {
             this.sticky[eventName] = payload;
@@ -60,6 +64,7 @@ class EventHub {
         }
 
         const boxs = this.listeners[eventName] || [];
+        
         // this.logger.debug(` Emitting to ${boxs.length} listeners for event: ${eventName}`);
 
         for (const box of boxs) {
@@ -86,6 +91,7 @@ class EventHub {
 
         this.queue = [];
     }
+    
 }
 
 const eventHub = new EventHub();
