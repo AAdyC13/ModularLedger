@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/modular_ledger/data/AppDatabase
 package com.example.modular_ledger.data
 
 import android.content.Context
@@ -8,38 +7,27 @@ import androidx.room.RoomDatabase
 
 /**
  * 應用程式的 Room 資料庫主體。
- * 負責管理資料庫版本、實體 (Entities) 並提供 DAO 存取點。
- *
- * @property expenseDao 提供對 Expense 表的資料存取物件 (DAO)。
+ * 已新增 ModuleEntity 與 ModuleDao。
  */
-
-@Database(entities = [Expense::class], version = 1, exportSchema = false)
+@Database(entities = [Expense::class, ModuleEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun expenseDao(): ExpenseDao
+    abstract fun moduleDao(): ModuleDao // 新增模組 DAO
 
     companion object {
-        /**
-         * @Volatile 確保此變數的變動對所有執行緒立即可見。
-         */
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        /**
-         * 取得資料庫的單例 (Singleton) 實例。
-         * 使用 double-checked locking 確保執行緒安全 (thread-safe)。
-         *
-         * @param context 應用程式上下文 (Application Context)，將用於初始化資料庫。
-         * @return AppDatabase 的單例實例。
-         */
         fun getDatabase(context: Context): AppDatabase {
-            // 多執行緒環境下，同步檢查 INSTANCE 是否已被初始化
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "accounting_database.db" // 資料庫檔案名稱
+                    "accounting_database.db"
                 )
+                // 注意：開發階段使用破壞性遷移 (清除資料)，正式上線可能須使用 addMigrations
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance
