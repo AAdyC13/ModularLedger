@@ -9,9 +9,15 @@ import { ApiResponse, ModuleRecord } from '@/types/module';
 // GET: 獲取列表
 export async function GET() {
   const modules = getModules();
-  return NextResponse.json<ApiResponse<ModuleRecord[]>>({ 
+  return NextResponse.json({ 
     success: true, 
     data: modules 
+  }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*', // 測試用先全部允許
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    }
   });
 }
 
