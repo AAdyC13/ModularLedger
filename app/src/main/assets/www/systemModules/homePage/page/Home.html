@@ -1,0 +1,61 @@
+<header class="sys-header-toolbar" id="menu-container-header">
+
+    <button class="sys-btn-toolbar" id="calendar-btn">日曆</button>
+    <button class="sys-btn-toolbar" id="list-btn">清單</button>
+    <button class="sys-btn-toolbar disabled" id="free-btn-1">按鈕</button>
+    <button class="sys-btn-toolbar disabled" id="free-btn-2">按鈕</button>
+    <button class="sys-btn-toolbar" id="setting-btn">設定</button>
+
+</header>
+
+<main class="sys-content" id="page-content">
+    <div class="home-calendar-view" id="home-calendar-view">
+
+        <div class="month-selector">
+            <button class="month-nav-btn" id="prev-month-btn">&lt;</button>
+            <h2 class="current-month" id="current-month"></h2>
+            <button class="month-nav-btn" id="next-month-btn">&gt;</button>
+        </div>
+
+        <div class="calendar-container">
+            <div class="calendar-weekdays">
+                <div class="weekday">日</div>
+                <div class="weekday">一</div>
+                <div class="weekday">二</div>
+                <div class="weekday">三</div>
+                <div class="weekday">四</div>
+                <div class="weekday">五</div>
+                <div class="weekday">六</div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+            </div>
+        </div>
+
+        <div class="records-container" id="records-container-calendar">
+            <div class="records-header">
+                <h3 id="selected-date"></h3>
+            </div>
+            <div class="records-list" id="records-list">
+                <p class="no-records"></p>
+            </div>
+        </div>
+
+        <div class="records-container hidden" id="records-container-list">
+            <div class="records-header">
+                <h3 id="selected-date-list"></h3>
+            </div>
+            <div class="records-list" id="records-list-forList">
+                <p class="no-records"></p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="sys-footer-toolbar" id="menu-container-footer">
+
+    <button class="sys-btn-toolbar disabled" id="free-btn-3">按鈕</button>
+    <button class="sys-btn-toolbar disabled" id="free-btn-4">按鈕</button>
+    <button class="sys-btn-toolbar" id="new-record-btn">記一筆</button>
+    <button class="sys-btn-toolbar disabled" id="free-btn-5">按鈕</button>
+    <button class="sys-btn-toolbar disabled" id="free-btn-6">按鈕</button>
+</footer>

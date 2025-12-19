@@ -1,5 +1,5 @@
-// app/src/main/java/com/example/modular_ledger/data/AppDatabase
-package com.example.modular_ledger.data
+// app/src/main/java/com/example/ModularLedger/data/AppDatabase
+package com.example.ModularLedger.data
 
 import android.content.Context
 import androidx.room.Database

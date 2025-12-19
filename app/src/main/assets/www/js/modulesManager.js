@@ -2,7 +2,7 @@
  * Modules Manager - 模組管理器
  */
 export class ModulesManager {
-    constructor(logger, bridge, eventAgent, whitelist) {
+    constructor(logger, bridge, eventAgent, whitelist, moduleLoadTimeout_s = 20) {
         this.logger = logger;
         this.bridge = bridge;
         this.eventAgent = eventAgent;
@@ -10,6 +10,7 @@ export class ModulesManager {
         this.whitelist = whitelist || [];
         this.logger.debug(`Whitelist set: ${this.whitelist.join(', ')}`);
         this.schemaLoadFailed = false;
+        this.moduleLoadTimeout_s = moduleLoadTimeout_s;
     }
 
     /**
@@ -38,22 +39,25 @@ export class ModulesManager {
     }
     handleAnalysisComplete(data) {
         const modID = data.modID;
-        //this.logger.debug(`Handling analysis complete for module: ${modID}`);
         const sys = data.sysName;
         const mod = this.moduleDict[modID];
+        this.logger.debug(`Handling analysis complete for module: ${modID}, system: ${sys}`);
         if (!mod) {
             this.logger.warn(`Module ${modID} not found in moduleDict`);
             return;
         }
         switch (sys) {
             case 'ElementManager':
-                mod.status.EM_ready = true;
+                mod.status.EM_check = true;
                 break;
             case 'ComponentManager':
-                mod.status.CM_ready = true;
+                mod.status.CM_check = true;
                 break;
-            case 'PageManager':
-                mod.status.PM_ready = true;
+            case 'PageManager_element':
+                mod.status.PMe_check = true;
+                break;
+            case 'PageManager_creating':
+                mod.status.PMc_check = true;
                 break;
             default:
                 this.logger.warn(`Unknown system name in analysis complete: ${sys}`);
@@ -115,7 +119,7 @@ export class ModulesManager {
     }
 
     async enableSystemModules() {
-        const modIds = new Set(this.getPrefixedIds('system'));
+        const modIds = new Set(this.getPrefixedIds('systemModule'));
         this.logger.debug(`System module IDs to enable: ${Array.from(modIds).join(', ')}`);
         await this.enableModules(modIds);
     }
@@ -126,27 +130,40 @@ export class ModulesManager {
      */
     async enableModules(modIds) {
         const totalMods = modIds.size;
+        this.logger.info(`Enabling ${JSON.stringify(Array.from(modIds))} modules...`);
         const ans = this.monitorModuleLoading.bind(this)(modIds);
         try {
             const mods = this.modFindByIds(modIds)
             const filenNames = mods.map(m => m.folderName);
             const techs = this.bridge.callSync('getTechs', filenNames);
             mods.forEach((mod) => {
-                try {
-                    const techData = techs[mod.folderName];
-                    if (techData) {
-                        mod.loadTech(techData);
-                        // 其他啟用邏輯在此添加
-                        this.eventAgent.emit('MM:Module_enabled', {
-                            id: mod.id,
-                            //警告! 這裡越過了mod.tech檢查，直接用techData
-                            tech: techData,
-                            folderName: mod.folderName
-                        });
-                        this.logger.debug(`Enabling module: ${mod.id}`);
+
+                const techData = techs[mod.folderName];
+                if (techData) {
+                    let res = null;
+                    try {
+                        res = mod.loadTech(techData)
+                    } catch (error) {
+                        this.logger.error(`Failed to loadTech for module: ${mod.id}: ` + error);
                     }
-                } catch (error) {
-                    this.logger.error(`Failed to loadTech for module: ${mod.id}: ` + error);
+                    if (res) {
+                        // 啟用邏輯在此添加
+                        for (const techName in mod.tech) {
+                            const emitName = `MM:Module_enabled:${techName}`;
+                            // this.logger.debug(`Emitting event ${emitName} for module: ${mod.id}`);
+                            this.eventAgent.emit(emitName, {
+                                id: mod.id,
+                                tech: mod.tech[techName],
+                                folderName: mod.folderName
+                            });
+                        }
+                        this.logger.debug(`Enabling module: ${mod.id}`);
+
+                    } else {
+                        this.logger.error(`Module ${mod.id} tech loading failed, skipping enable`);
+                    }
+                } else {
+                    this.logger.warn(`No tech.json found for module: ${mod.id}`);
                 }
             });
         } catch (error) {
@@ -170,9 +187,8 @@ export class ModulesManager {
      * @returns {Promise<Set>} 返回未完成的模組 ID Set，如果全部完成則為空 Set
      */
     async monitorModuleLoading(modIds) {
-        //const totalMods = modIds.size;
         const checkInterval = 50; // 毫秒
-        const timeout = 10000; // 最長等待時間，10 秒
+        const timeout = this.moduleLoadTimeout_s * 1000;
         let elapsed = 0;
 
         return new Promise((resolve, reject) => {
@@ -181,7 +197,7 @@ export class ModulesManager {
 
                 for (const modId of modIds) {
                     const mod = this.moduleDict[modId];
-                    if (mod && mod.status.EM_ready && mod.status.CM_ready && mod.status.PM_ready) {
+                    if (mod.checkeLoadingStatus()) {
                         toRemove.add(modId);
                     }
                 }
@@ -189,10 +205,6 @@ export class ModulesManager {
                 if (toRemove.size > 0) {
                     for (const id of toRemove) {
                         this.logger.debug(`Module fully enabled: ${id}`);
-                        
-                        // 警告! 目前由於Page不來自模組，所以兩者沒有關聯性，將在enableModules() 強制reset all pages
-                        //this.eventAgent.emit('MM:Module_fully_enabled', { id });
-
                         modIds.delete(id);
                     }
                 }
@@ -285,22 +297,30 @@ class Module {
             license: data['module license'] || '',
             tags: Array.isArray(data.tags) ? data.tags : []
         }
-        this.tech = null;
+        this.permissions = null;
+        this.tech = {};
         this.status = {
             enabled: false,
             techLoaded: false,
-            EM_ready: false,
-            CM_ready: false,
-            PM_ready: false
+            EM_check: true,
+            CM_check: true,
+            PMe_check: true, // PageManager's element check
+            PMc_check: true,// PageManager's creating check
+            MD_check: true
         }
 
         // 標記是否為白名單模組(未經驗證)
         this.isWhitelisted = skipValidation;
 
     }
+    checkeLoadingStatus() {
+        return this.status.EM_check && this.status.CM_check && this.status.PMc_check && this.status.PMe_check;
+    }
     loadTech(data) {
         if (!Module.techSchema) {
-            throw new Error('Tech schema not available');
+            // throw new Error('Tech schema not available');
+            Module.logger.error('Tech schema not available');
+            return false;
         }
         if (Object.keys(data).length === 0) {
             Module.logger.debug(`Empty tech for module: ${this.id}`);
@@ -309,18 +329,40 @@ class Module {
                 // 警告! 目前跳過驗證，這個函數有大問題
                 //this.validate_tech(data);
             } catch (error) {
-                throw new Error('Tech validation failed: ' + error);
+                // throw new Error('Tech validation failed: ' + error);
+                Module.logger.error(`Tech validation failed for module ${this.id}: ` + error);
+                return false;
             }
         }
-        this.tech = {
-            blueprints: data.blueprints || [],
-            components: data.components || [],
-            module_dependencies: data.module_dependencies || [],
-        };
+        if (!data.permissions) {
+            Module.logger.warn(`No permissions defined for module ${this.id}`);
+        } else {
+            this.permissions = new Set(data.permissions);
+
+            if (this.permissions.has('registerPages')) {
+                this.tech["registerPages"] = data.registerPages || [];
+                this.status.PMc_check = false;
+            }
+            if (this.permissions.has('registerElements')) {
+                this.tech["registerElements"] = data.registerElements || [];
+                this.status.EM_check = false;
+                // this.status.PMe_check = false;
+            }
+            if (this.permissions.has('registerComponents')) {
+                this.tech["registerComponents"] = data.registerComponents || [];
+                this.status.CM_check = false;
+            }
+            if (this.permissions.has('moduleDpendencies')) {
+                this.tech["moduleDpendencies"] = data.moduleDpendencies || [];
+                this.status.MD_check = false;
+            }
+        }
         this.status.techLoaded = true;
         Module.logger.debug(`Tech loaded for module: ${this.id}`);
+        return true;
     }
     unloadTech() {
+        this.permissions = null;
         this.tech = null;
         this.status.techLoaded = false;
         Module.logger.debug(`Tech unloaded for module: ${this.id}`);

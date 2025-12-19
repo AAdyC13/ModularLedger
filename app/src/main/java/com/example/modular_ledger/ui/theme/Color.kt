@@ -1,4 +1,4 @@
-package com.example.modular_ledger.ui.theme
+package com.example.ModularLedger.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

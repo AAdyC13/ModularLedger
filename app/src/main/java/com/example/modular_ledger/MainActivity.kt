@@ -1,18 +1,25 @@
-package com.example.modular_ledger
+package com.example.ModularLedger
 
+import android.graphics.Color
 import android.os.Bundle
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.getValue
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
+    private lateinit var rootLayout: FrameLayout
 
     companion object {
         private const val SERVER_URL = "http://163.18.29.38:3000/" // 實體裝置用
@@ -20,10 +27,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled(true)
 
         val webView = WebView(this)
+        rootLayout = FrameLayout(this)
+        rootLayout.addView(webView)
+
+        // 設定預設背景顏色
+        updateThemeColor("#2e5773")
 
         // WebView 基本設定
         val settings = webView.settings
@@ -81,9 +94,44 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
+        // 處理系統 bar 的 inset，放在設定完成且在 setContentView 之前
+        ViewCompat.setOnApplyWindowInsetsListener(rootLayout) { v, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            insets
+        }
+
         webView.addJavascriptInterface(AndroidBridge(this, BackgroundWorker(this)), "AndroidBridge")
-        setContentView(webView)
+        setContentView(rootLayout)
         webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
+    }
+
+    /**
+     * 動態更新父容器顏色與系統欄圖示明暗
+     * @param colorHex 十六進位顏色字串，例如 "#FFFFFF" 或 "#121212"
+     */
+    fun updateThemeColor(colorHex: String) {
+        try {
+            val color = Color.parseColor(colorHex)
+            rootLayout.setBackgroundColor(color)
+
+            // 自動調整狀態列與導覽列圖示顏色（深色背景用亮色圖示，反之亦然）
+            val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
+            val isLight = isColorLight(color)
+            windowInsetsController.isAppearanceLightStatusBars = isLight
+            windowInsetsController.isAppearanceLightNavigationBars = isLight
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun isColorLight(color: Int): Boolean {
+        val darkness =
+                1 -
+                        (0.299 * Color.red(color) +
+                                0.587 * Color.green(color) +
+                                0.114 * Color.blue(color)) / 255
+        return darkness < 0.5
     }
 
     private fun addSecurityHeaders(orig: WebResourceResponse): WebResourceResponse {

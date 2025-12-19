@@ -1,5 +1,5 @@
-// app/src/main/java/com/example/modular_ledger/data/Expense.kt
-package com.example.modular_ledger.data
+// app/src/main/java/com/example/ModularLedger/data/Expense.kt
+package com.example.ModularLedger.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey

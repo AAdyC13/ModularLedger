@@ -17,7 +17,7 @@ export class Router {
             delete this.pageCaches[PEid];
             this.logger.debug(`Page deleted from cache: [${PEid}]`);
         });
-        this.eventAgent.on('RT::Index_page_is', this.indexPageIs.bind(this));
+        this.eventAgent.on('RT:Index_page_is', this.indexPageIs.bind(this));
         this.eventAgent.on('EM:navigate', this.proxyNavigate.bind(this));
 
     }
@@ -115,10 +115,14 @@ export class Router {
     }
 
     async start() {
-        this.eventAgent.emit('Router:Starting', this.indexPage, {});
-        await this.eventAgent.callMeBack();
-
         this.logger.debug(`Starting navigation to index page: ${this.indexPage}`);
+        try {
+            await this.eventAgent.emit('Router:Start_indexPage', this.indexPage, {});
+        } catch (err) {
+            this.logger.error(`Start_indexPage failed: ${err}`);
+            // 警告! 明確無法加載首頁，應交回 runtime 處理
+            throw new Error(`Start_indexPage [${this.indexPage}] failed: ${err}`);
+        }
         this.navigate(this.indexPage, {});
     }
 

@@ -1,9 +1,0 @@
-{
-	"name": "Module Shop",
-	"id": "system.ModuleShop",
-	"version": "1.0.0",
-	"author": "admin",
-	"description": "模組化記帳系統 - 建構模組商店介面",
-	"module license": "MIT",
-	"tags": ["system"]
-}

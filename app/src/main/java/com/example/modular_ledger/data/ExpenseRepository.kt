@@ -1,6 +1,6 @@
-// app/src/main/java/com/example/modular_ledger/data/ExpenseRepository.kt
+// app/src/main/java/com/example/ModularLedger/data/ExpenseRepository.kt
 
-package com.example.modular_ledger.data
+package com.example.ModularLedger.data
 
 import kotlinx.coroutines.flow.Flow
 import java.util.Date

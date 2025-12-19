@@ -17,6 +17,7 @@ import { ComponentManager } from './componentManager.js';
 class Runtime {
     constructor() {
         this.isInitialized = false;
+        this.indexPageLoaded = false;
     }
 
     /**
@@ -57,6 +58,7 @@ class Runtime {
                 bridge,
                 eventHub.createAgent('ModulesManager'),
                 runtimeConfig.whitelist || [],
+                runtimeConfig.moduleLoadTimeout_s || 20
             );
             this.logger.debug('ModulesManager build successfully');
 
@@ -92,8 +94,8 @@ class Runtime {
             await Promise.all([
                 errorHandler.init(),
                 modulesManager.init(new Logger('Module')),
-                pageManager.init(runtimeConfig.preLoadPages || []),
-                elementManager.init(),
+                pageManager.init(new Logger('Page')),
+                elementManager.init(new Logger('Element')),
                 router.init(),
                 componentManager.init(),
             ]);
@@ -106,9 +108,14 @@ class Runtime {
             if (!runtimeConfig.indexPage) {
                 throw new Error('indexPage is not defined in runtimeConfig');
             }
-            //this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
-            router.indexPageIs(runtimeConfig.indexPage);
 
+            // router 和 pageManager 需要知道首頁是什麼
+            await this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
+            this.eventAgent.on('PM:Finish_preloade_page', (PE) => {
+                if (PE.id === runtimeConfig.indexPage) {
+                    this.indexPageLoaded = true;
+                }
+            });
             await modulesManager.enableSystemModules();
 
 
@@ -118,6 +125,7 @@ class Runtime {
             // x. finished
             // --------------------------------------------
             window.errorHandler = errorHandler; // 供崩潰畫面使用
+            // await this.monitorModuleLoading(runtimeConfig.runtimeTimeout_s || 20);
             await router.start();
             this.isInitialized = true;
             this.logger.info('Application started successfully');
@@ -128,6 +136,28 @@ class Runtime {
             }
             this.handleStartupError(error);
         }
+    }
+
+    async monitorModuleLoading(timeout_s = 20) {
+        const checkInterval = 50; // 毫秒
+        const timeout = timeout_s * 1000;
+        let elapsed = 0;
+
+        return new Promise((resolve, reject) => {
+            const intervalId = setInterval(() => {
+
+                if (this.indexPageLoaded) {
+                    clearInterval(intervalId);
+                    resolve(true);
+                }
+
+                elapsed += checkInterval;
+                if (elapsed >= timeout) {
+                    clearInterval(intervalId);
+                    resolve(false);
+                }
+            }, checkInterval);
+        });
     }
 
     /**

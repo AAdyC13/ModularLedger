@@ -1,5 +1,5 @@
-// app/src/main/java/com/example/modular_ledger/data/ExpenseDao.kt
-package com.example.modular_ledger.data
+// app/src/main/java/com/example/ModularLedger/data/ExpenseDao.kt
+package com.example.ModularLedger.data
 
 import androidx.room.Dao
 import androidx.room.Delete

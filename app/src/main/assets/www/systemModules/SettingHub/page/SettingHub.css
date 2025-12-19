@@ -1,0 +1,32 @@
+.setting-main {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+	height: 100%;
+	width: 100%;
+
+	/* ===== Calendar Variables ===== */
+	/* --setting-option-btn-bg: var(--c8); */
+	--setting-option-btn-color: var(--c3);
+	--setting-option-btn-border-color: var(--c3);
+}
+button.setting-option-btn {
+	flex: 0 1 50px;
+	display: flex;
+	padding: 12px 16px;
+	margin: 8px 0;
+	font-size: 16px;
+	text-align: left;
+	color: var(--setting-option-btn-color);
+	background-color: var(--setting-option-btn-bg);
+	font-weight: 100;
+	border-top: 1px solid var(--setting-option-btn-border-color);
+	border-left: 1px solid var(--setting-option-btn-border-color);
+	border-bottom: 3px solid var(--setting-option-btn-border-color);
+	border-right: 3px solid var(--setting-option-btn-border-color);
+	border-radius: 6px;
+}
+button.setting-option-btn:active {
+	transform: scale(0.96);
+}
