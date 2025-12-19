@@ -5,7 +5,7 @@ export class Bridge {
     constructor(logger) {
         this.isAndroid = this.detectAndroid();
         this.logger = logger;
-
+        this.virtual_domain = "https://appassets.androidplatform.net";
         if (!this.isAndroid) {
             this.logger.warn('Not in Android environment, Android methods will return null');
         }
@@ -30,7 +30,7 @@ export class Bridge {
         try {
             const fn = window.AndroidBridge[method];
             if (typeof fn === 'function') {
-                
+
                 // 自動編碼複雜類型參數
                 const encodedArgs = args.map(arg => {
                     if (arg !== null && typeof arg === 'object') {
@@ -56,6 +56,36 @@ export class Bridge {
             }
         } catch (error) {
             this.logger.error(`Error calling ${method}:` + error);
+            return null;
+        }
+    }
+
+    async fetchSystemModules(path, resultType = 'text') {
+        const url = `${this.virtual_domain}/assets/www/systemModules/${path}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                this.logger.error(`Failed to fetch system module from ${url}`);
+                return null;
+            }
+            const data = await response[resultType]();
+            return data;
+        } catch (error) {
+            this.logger.error(`Error fetching system module from ${url}: ${error}`);
+            return null;
+        }
+    }
+    async fetch(url) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                this.logger.error(`Failed to fetch from ${url}`);
+                return null;
+            }
+            return response;
+        }
+        catch (error) {
+            this.logger.error(`Error fetching from ${url}: ${error}`);
             return null;
         }
     }

@@ -1,3 +1,4 @@
+// 留著做參考用，實際上不使用此檔案
 
 const SHADOW_SUPPORTED = typeof HTMLElement !== 'undefined' && !!HTMLElement.prototype.attachShadow;
 const GLOBAL_OBJECT = typeof globalThis !== 'undefined' ? globalThis : window;
@@ -402,15 +403,13 @@ export class ComponentManager {
 
     }
     init() {
-        this.eventAgent.on("MM:Module_enabled", this.analysisBlueprint.bind(this));
+        this.eventAgent.on("MM:Module_enabled:registerComponents", this.analysisBlueprint.bind(this));
     }
     analysisBlueprint(data) {
         const modID = data.id;
-        const tech = data.tech;
+        const registerComponents = data.tech;
         try {
-            const blueprint = tech.blueprints || [];
-
-            for (const bp of blueprint) {
+            for (const bp of registerComponents) {
                 this.createElement(modID, bp);
             }
         } catch (error) {

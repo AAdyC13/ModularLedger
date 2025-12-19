@@ -17,28 +17,32 @@ html,
 body {
 	height: 100%;
 	width: 100%;
-	font-family: system-ui, sans-serif;
-	-webkit-font-smoothing: antialiased;
-	-webkit-text-size-adjust: 100%;
-	background: var(--bg-primary);
-	color: var(--text-primary);
-	line-height: 1.6;
-	padding: 0.3rem;
+	font-family: var(
+		--sys-font-family,
+		system-ui,
+		-apple-system,
+		"Segoe UI",
+		Roboto,
+		"Noto Sans",
+		Arial,
+		sans-serif
+	);
+	font-weight: var(--sys-body-font-weight);
+	background: var(--sys-body-bg);
+	color: var(--sys-body-color);
+	padding: var(--sys-body-padding);
 	overflow: hidden;
 	user-select: none;
 	-webkit-user-select: none;
 	-moz-user-select: none;
 	-ms-user-select: none;
-}
-#app {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	width: 100%;
-	border: 1px solid var(--text-secondary);
-	border-radius: 12px;
-	overflow: hidden;
-	transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* 針對一些瀏覽器的UI優化設定 */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
 }
 
 /* 去掉列表預設樣式 */
@@ -67,8 +71,12 @@ select {
 	appearance: none;
 }
 
-/* 圖片規則 */
 img {
 	display: block;
 	max-width: 100%;
+}
+
+.strong,
+strong {
+	font-weight: var(--sys-strong-font-weight);
 }

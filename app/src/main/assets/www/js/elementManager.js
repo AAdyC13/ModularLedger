@@ -8,10 +8,10 @@ export class ElementManager {
         this.pageElementCounter = {}; // 計數每個頁面的元素數量
     }
     init() {
-        this.eventAgent.on("MM:Module_enabled", this.analysisBlueprint.bind(this));
+        this.eventAgent.on("MM:Module_enabled:registerElements", this.analysisBlueprint.bind(this));
         this.eventAgent.on("PM:Finish_create_page", this.putElementToPE.bind(this));
     }
-    handlerAction(action, parameters) {
+    async EventListenerHub(target, action, parameters) {
         if (!action) {
             this.logger.warn('Action missing in handlerAction');
             return;
@@ -21,14 +21,14 @@ export class ElementManager {
 
             switch (action) {
                 case 'navigate':
-                    this.eventAgent.emit('EM:navigate', {
+                    await this.eventAgent.emit('EM:navigate', {
                         pageID: parameters.pageID,
                         options: parameters.options
                     });
                     break;
 
                 case 'callComponentMethod':
-                    this.eventAgent.emit('EM:call_component_method', {
+                    await this.eventAgent.emit('EM:call_component_method', {
                         moduleID: parameters.moduleID,
                         componentName: parameters.componentName,
                         methodName: parameters.methodName,
@@ -47,11 +47,9 @@ export class ElementManager {
 
     analysisBlueprint(data) {
         const modID = data.id;
-        const tech = data.tech;
+        const registerElements = data.tech;
         try {
-            const blueprint = tech.blueprints || [];
-
-            for (const bp of blueprint) {
+            for (const bp of registerElements) {
                 this.createElement(modID, bp);
             }
             this.eventAgent.emit('EM:analysis_complete', { sysName: "ElementManager", modID: modID }, {});
@@ -63,20 +61,77 @@ export class ElementManager {
     putElementToPE(PageElement) {
         let elemCount = 0;
         this.elementsByPage[PageElement.id]?.forEach((elemID) => {
-
             const elem = this.elements[elemID];
-            // this.logger.debug(`Putting element [${elem.id}] to page [${PageElement.id}] at slot [${elem.slotID}], DOM: ${elem.dom.outerHTML}`);
-            // this.logger.debug(`PageElement [${PageElement.getRoot().outerHTML}] slotID [${PageElement.getRoot().querySelector("div.page-header")?.outerHTML}]`);
-            const slot = PageElement.getRoot().querySelector(`.${elem.slotID}`);
-            if (!slot) {
-                this.logger.warn(`Slot [${elem.slotID}] not found in Page [${PageElement.id}] for Element [${elem.id}]`);
-                return;
+            if (elem.replacers) {
+                for (const replacer of elem.replacers) {
+                    PageElement.replaceElement(replacer, elem.modID);
+                }
             }
-            slot.appendChild(elem.dom);
-            if (elem.hasNavigate.size > 0) {
-                elem.hasNavigate.forEach((pageID) => {
-                    PageElement.connectingPages.add(pageID);
-                });
+
+            let dom = null;
+            if (elem.handlers) {
+                if (elem.selector === "") {
+                    dom = PageElement.getRoot();
+                } else {
+                    dom = PageElement.getRoot().querySelector(elem.selector);
+                }
+                if (!dom) {
+                    this.logger.error(`Selector [${elem.selector}] not found in page DOM for attaching handlers`);
+                    return;
+                }
+                for (const handler of elem.handlers) {
+                    if (!PageElement.hasHandler(elem.selector, handler.event)) {
+                        let attachedFunc = null;
+                        switch (handler.event) {
+                            case 'click':
+                                //attachedFunc type = function or false
+                                this.logger.debug(`Click handler attached for selector [${handler.selector}]`);
+                                attachedFunc = this.attachHandler(dom, handler.event);
+
+                                // Record connecting pages if navigation is involved
+                                if (handler.action === 'navigate') {
+                                    const pageID = handler.parameters.pageID;
+                                    if (typeof pageID === "string" && pageID.trim() !== "") {
+                                        PageElement.connectingPages.add(pageID);
+                                    }
+                                }
+                                break;
+                            
+                            case 'authorize':
+                                if (!elem.static.authorizeHandlerAttached) {
+                                    //attachedFunc type = null
+                                    const slot = dom.querySelector(handler.selector)
+                                    // this.logger.debug(`Attaching authorize handler for selector [${slot.innerHTML}]`);
+                                    if (!slot) {
+                                        this.logger.error(`Selector [${handler.selector}] not found in element DOM for attaching authorize handler`);
+                                        attachedFunc = false;
+                                        break;
+                                    }
+                                    this.eventAgent.emit('EM:authorize_element', {
+                                        moduleID: handler.parameters.moduleID,
+                                        componentName: handler.parameters.componentName,
+                                        methodName: handler.parameters.methodName,
+                                        dom: slot
+                                    }, { sticky: true });
+                                    this.logger.debug(`Authorize handler attached for selector [${handler.selector}]`);
+                                    elem.static.authorizeHandlerAttached = true;
+                                } else {
+                                    this.logger.warn(`Authorize handler already attached for selector [${handler.selector}]`);
+                                }
+                                break;
+                        }
+
+                        if (attachedFunc) {
+                            PageElement.setHandler(elem.selector, handler.event, attachedFunc);
+                        } else if (attachedFunc === false) {
+                            this.logger.error(`Failed to attach handler for event [${handler.event}] on selector [${elem.selector}]`);
+                            continue;
+                        } else if (attachedFunc === null) {
+                            // do nothing for null
+                        }
+                    }
+                    this.attachDataset(dom, handler.selector, handler.action, handler.parameters);
+                }
             }
             PageElement.connectingModules.add(elem.modID);
             elemCount++;
@@ -85,63 +140,89 @@ export class ElementManager {
         const word = elemCount === 1 || elemCount === 0 ? 'element' : 'elements';
         this.logger.debug(`Finish putting ${elemCount} ${word} to page [${PageElement.id}]`);
     }
+    attachDataset(dom, selector, action, row_parameters) {
+        const element = dom.querySelector(selector);
+        if (!element) {
+            this.logger.error(`Selector [${selector}] not found in element DOM for attaching handler`);
+            return false;
+        }
+        switch (action) {
+            case 'navigate':
+                element.dataset.action = 'navigate';
+                element.dataset.parameters = JSON.stringify({
+                    pageID: row_parameters.pageID,
+                    options: row_parameters.options || {}
+                });
+                break;
+            case 'callComponentMethod':
+                element.dataset.action = 'callComponentMethod';
+                element.dataset.parameters = JSON.stringify({
+                    moduleID: row_parameters.moduleID,
+                    componentName: row_parameters.componentName,
+                    methodName: row_parameters.methodName,
+                });
+                break;
+        }
+    }
+    attachHandler(dom, eventName) {
+        let handlerFunc = false;
+        try {
+            const systemInterface = this.EventListenerHub.bind(this);
 
+            // 警告! 隨著Handler需求變多，這裡可能需要改成switch-case來分流不同的事件處理邏輯
+            handlerFunc = async (e) => {
+                e.preventDefault();
+                const target = e.target;
+                const action = target.dataset.action;
+                if (action) {
+                    try {
+                        const parameters = JSON.parse(target.dataset.parameters);
+                        if (action === 'navigate') { 
+                            await this.waitButtonRelease(target);
+                        }
+                        await systemInterface(target, action, parameters);
+                    } catch (error) {
+                        this.logger.error(`Error processing event handler parameters: ${error}`);
+                    }
+                }
+
+            };
+            dom.addEventListener(eventName, handlerFunc);
+
+        } catch (error) {
+            this.logger.error(`Failed to attach handler for event ${eventName} on element ${dom.id}: ${error}`);
+        }
+        return handlerFunc;
+    }
+    waitButtonRelease(el) {
+    return new Promise(resolve => {
+        let done = false;
+
+        const finish = () => {
+            if (done) return;
+            done = true;
+            el.removeEventListener('transitionend', finish);
+            resolve();
+        };
+
+        el.addEventListener('transitionend', finish, { once: true });
+
+        // fallback，防止無動畫或 prefers-reduced-motion
+        setTimeout(finish, 200);
+    });
+}
     createElement(modID, bp) {
         const pageID = bp.page;
-        const slotID = bp.slot;
-        const html = bp.html || "";
-        const handlers = bp.handlers || [];
-        const handlersDict = new Set();
-        let hasNavigate = new Set();
+        const selector = bp.selector;
+        const replacers = bp.replacers || null;
+        const handlers = bp.handlers || null;
 
         // 不穩定的 id 產生方式，暫時先這樣
         this.pageElementCounter[pageID] = (this.pageElementCounter[pageID] || 0) + 1;
         let id = `${modID}_${pageID}_${this.pageElementCounter[pageID]}`;
-        const dom = this.createDOMFromString(html);
 
-        const handlers_byEvent = [];
-        // handlers_byEvent = [
-        //     {
-        //         name: "click",
-        //         handlers: [
-        //             {
-        //                 selector: "#btn1",
-        //                 action: "navigate",
-        //                 parameters: { pageID: "somePageID", options: {} }
-        //             }, ...
-        //         ]
-        //     }, ...
-        // ];
-        const groupedHandlers = new Map();
-        for (const handler of handlers) {
-            if (!groupedHandlers.has(handler.event)) {
-                groupedHandlers.set(handler.event, []);
-            }
-            groupedHandlers.get(handler.event).push({
-                selector: handler.selector,
-                action: handler.action,
-                parameters: handler.parameters
-            });
-        }
-        handlers_byEvent.push(...Array.from(groupedHandlers.entries()).map(([event, handlers]) => ({
-            name: event,
-            handlers: handlers
-        })));
-        for (const handlerEvent of handlers_byEvent) {
-            try {
-                const { handlerFunc, navigates } = this.attachHandlers(dom, handlerEvent.name, handlerEvent.handlers);
-                navigates.forEach(v => hasNavigate.add(v));
-
-                if (handlerFunc) {
-                    handlersDict.add({ event: handlerEvent.name, handlerFunc: handlerFunc });
-                }
-            } catch (error) {
-                this.logger.error(`Failed to create element handler for event ${handlerEvent.name} on element ${id}: ${error}`);
-            }
-        }
-
-
-        this.elements[id] = new PageElement(id, pageID, slotID, modID, dom, handlersDict, hasNavigate);
+        this.elements[id] = new Element(
+            id, pageID, selector, modID, replacers, handlers);
 
         // 索引
         this.elementsByPage[pageID] ??= new Set();
@@ -151,56 +232,16 @@ export class ElementManager {
         this.logger.debug(`Element created : ${id}`);
         return id;
     }
-    createDOMFromString(html) {
-        const template = document.createElement('template');
-        template.innerHTML = html.trim();
-        return template.content.firstElementChild;
-    }
-    attachHandlers(dom, eventName, args) {
-        let handlerFunc = null;
-        const navigates = new Set();
-        for (const each of args) {
-            const element = dom.querySelector(each.selector);
-            if (!element) {
-                this.logger.error(`Selector [${each.selector}] not found in element DOM for attaching handler`);
-                continue;
-            }
-
-            if (each.action === "navigate") {
-                navigates.add(each.parameters.pageID);
-            }
-            element.dataset.action = each.action;
-            element.dataset.parameters = JSON.stringify(each.parameters);
-        }
-        try {
-            const systemFunc = this.handlerAction.bind(this);
-            handlerFunc = (e) => {
-                const target = e.target;
-                const action = target.dataset.action;
-                const parameters = JSON.parse(target.dataset.parameters || "{}");
-                //console.log(`Event [${eventName}] triggered on element [${target.id}] with action [${action}]`);
-                systemFunc(action, parameters);
-            };
-            dom.addEventListener(eventName, handlerFunc);
-
-        } catch (error) {
-            this.logger.error(`Failed to attach handler for event ${eventName} on element ${dom.id}: ${error}`);
-        }
-
-        return { handlerFunc, navigates };
-
-    }
 
 }
-class PageElement {
-    constructor(id, pageID, slotID, modID, dom = null, handlersDict, hasNavigate) {
+class Element {
+    constructor(id, pageID, selector, modID, replacers, handlers) {
         this.id = id;
         this.pageID = pageID;
-        this.slotID = slotID;
+        this.selector = selector;
         this.modID = modID;
-        this.dom = dom;
-        this.eventHandlers = {};
-        this.handlersDict = handlersDict;
-        this.hasNavigate = hasNavigate;
+        this.replacers = replacers;
+        this.handlers = handlers;
+        this.static = {}
     }
 }

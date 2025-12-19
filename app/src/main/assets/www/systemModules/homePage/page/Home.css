@@ -1,0 +1,188 @@
+.home-calendar-view {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+	height: 100%;
+	width: 100%;
+	/* ===== Calendar Variables ===== */
+	--calender-month-selector-font-size: 25px;
+	--calender-month-selector-active-font-size: calc(
+		var(--calender-month-selector-font-size) - 4px
+	);
+	--calender-color-border-bottom: var(--c6);
+	--calender-border-bottom: 2px solid var(--calender-color-border-bottom);
+	--calender-color-record-item: auto;
+	--calender-color-calendar-day: auto;
+	--calender-color-today: var(--c8);
+	--calender-color-day-selecte: var(--c3);
+	--calender-font-size-day: 14px;
+	--calender-font-size-day-active: calc(var(--calender-font-size-day) - 4px);
+	--calender-btn-active-color: var(--sys-btn-toolbar-active-color);
+}
+/* ===== month-selector ===== */
+.month-selector {
+	flex: 0 1 auto;
+	min-height: 50px;
+
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1px;
+	border-bottom: var(--calender-border-bottom);
+}
+.month-selector .current-month {
+	font-size: var(--calender-month-selector-font-size);
+	font-weight: 600;
+}
+.month-selector .month-nav-btn {
+	min-height: 30px;
+	min-width: 40px;
+	font-size: var(--calender-month-selector-font-size);
+	font-weight: 600;
+
+	transition: all 0.2s ease;
+}
+.month-selector .month-nav-btn:active {
+	font-size: var(--calender-month-selector-active-font-size);
+	color: var(--calender-btn-active-color);
+}
+
+/* ===== calendar-container ===== */
+.calendar-container {
+	flex: 1 1 auto;
+	overflow-y: hidden;
+
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	border-bottom: var(--calender-border-bottom);
+}
+.calendar-weekdays {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	margin-bottom: 1px;
+}
+
+.weekday {
+	text-align: center;
+	font-size: var(--calender-font-size-day);
+}
+
+.calendar-grid {
+	display: grid;
+	max-height: 90%;
+	grid-template-columns: repeat(7, 1fr);
+	grid-auto-rows: auto;
+}
+/* ===== records-container ===== */
+.records-container {
+	min-height: 50%;
+	flex: 1 1 auto;
+	overflow-y: hidden;
+
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+}
+.records-container .calendar {
+	flex: 1;
+}
+.records-container .list {
+	flex: 1;
+}
+
+.records-header {
+	flex: 0 0 auto;
+	padding-top: 2px;
+	padding-left: 3px;
+	padding-bottom: 3px;
+	min-height: 30px;
+	margin-bottom: 5px;
+}
+
+.records-list {
+	flex: 1;
+	display: flex;
+	padding: 2px;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch; /* iOS */
+}
+
+.no-records {
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 15%;
+	margin-bottom: auto;
+	font-size: 20px;
+}
+
+.record-items {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.record-item {
+	padding: 10px;
+	color: var(--calender-color-record-item);
+	border: 1px dashed;
+	border-radius: 10px;
+	transition: all 0.2s ease;
+}
+.record-item:focus {
+	border: 1px dotted var(--calender-btn-active-color);
+}
+
+.calendar-day {
+	aspect-ratio: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: var(--calender-font-size-day);
+	color: var(--calender-color-calendar-day);
+	position: relative;
+	transition: all 0.2s ease;
+}
+
+.calendar-day:not(.empty):active {
+	font-size: var(--calender-font-size-day-active);
+	color: var(--calender-btn-active-color);
+}
+.calendar-day:not(.empty):focus {
+	border: 1px dotted var(--calender-btn-active-color);
+}
+
+.calendar-day.empty {
+	background: transparent;
+	box-shadow: none;
+	cursor: default;
+}
+
+.calendar-day.today {
+	color: var(--calender-color-today);
+	font-weight: 600;
+}
+
+.calendar-day.selected {
+	color: var(--calender-color-day-selecte);
+	font-weight: 700;
+}
+
+.calendar-day.has-record::after {
+	content: "";
+	position: absolute;
+	bottom: 4px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--calender-color-today);
+}
+
+.calendar-day.selected.has-record::after {
+	background: var(--calender-color-today);
+}

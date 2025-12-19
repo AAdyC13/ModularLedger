@@ -48,7 +48,7 @@ class EventHub {
     }
 
     // 發送事件
-    emit(eventName, payload, options = {}, agent = new EventAgent("unknownAgent")) {
+    async emit(eventName, payload, options = {}, agent = new EventAgent("unknownAgent")) {
 
         //this.logger.debug(`Agent [${agent.name}] emit: [${eventName}: ${payload}]`);
 
@@ -64,29 +64,36 @@ class EventHub {
         }
 
         const boxs = this.listeners[eventName] || [];
-        
+
         // this.logger.debug(` Emitting to ${boxs.length} listeners for event: ${eventName}`);
 
-        for (const box of boxs) {
+        // 收集每個 handler 的 Promise，並等待全部完成（或至少 settle）
+        const promises = boxs.map(box => {
             box.agent.receiving = true;
-            Promise.resolve().then(() => {
-                try {
-                    box.handler(payload);
-                } catch (err) {
-                    this.logger.error(`Error in event handler for event ${eventName}: ${err}`);
-                } finally {
+            const p = Promise.resolve().then(() => box.handler(payload));
+            return p
+                .catch(err => {
+                    if (this.logger && this.logger.error) {
+                        this.logger.error(`Error in event handler for event ${eventName}: ${err}`);
+                    } else {
+                        console.error(err);
+                    }
+                })
+                .finally(() => {
                     box.agent.receiving = false;
-                }
-            });
-        }
+                });
+        });
+
+        await Promise.allSettled(promises);
     }
 
     // 啟動後重播 queue
-    setReady() {
+    async setReady() {
         this.ready = true;
 
-        for (const { eventName, payload, options } of this.queue) {
-            this.emit(eventName, payload, options);
+        // 依序回放並等待每個事件處理完成（保留順序）
+        for (const { eventName, payload, options, agent } of this.queue) {
+            await this.emit(eventName, payload, options, agent);
         }
 
         this.queue = [];
@@ -127,8 +134,8 @@ class EventAgent {
         eventHub.on(eventTitle, handler, this);
     }
 
-    emit(eventTitle, payload, options = {}) {
-        eventHub.emit(eventTitle, payload, options, this);
+    async emit(eventTitle, payload, options = {}) {
+        await eventHub.emit(eventTitle, payload, options, this);
     }
     getReceiving() {
         return this.receiving;

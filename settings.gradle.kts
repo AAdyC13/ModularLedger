@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "modular_ledger"
+rootProject.name = "ModularLedger"
 include(":app")

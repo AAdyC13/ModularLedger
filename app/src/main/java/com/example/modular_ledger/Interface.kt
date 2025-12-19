@@ -1,4 +1,4 @@
-package com.example.modular_ledger
+package com.example.ModularLedger
 
 import android.content.Context
 import android.content.Intent
@@ -9,6 +9,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class AndroidBridge(private val context: Context, private val worker: BackgroundWorker) {
+
+    @JavascriptInterface
+    fun syncThemeColor(color: String) {
+        (context as? MainActivity)?.runOnUiThread { context.updateThemeColor(color) }
+    }
 
     @JavascriptInterface
     fun getSystemModulesList(): String {
@@ -136,13 +141,6 @@ class AndroidBridge(private val context: Context, private val worker: Background
             context.startActivity(Intent.createChooser(shareIntent, title))
         } catch (e: Exception) {
             Toast.makeText(context, "分享失敗", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    @JavascriptInterface
-    fun exitApp() {
-        if (context is android.app.Activity) {
-            context.finish()
         }
     }
 
