@@ -14,7 +14,7 @@ export async function GET() {
     data: modules 
   }, {
     headers: {
-      'Access-Control-Allow-Origin': '*', // 測試用先全部允許
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     }
@@ -31,25 +31,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: '請上傳 .zip 格式的檔案' }, { status: 400 });
     }
 
-    // 將 File 轉為 Buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 1. 解析 Zip 並驗證內容並
+    // 1. 解析 Zip (僅檢查根目錄 info.json)
     const info = await parseModuleZip(buffer);
-    const safeId = info.id.replace(/[^a-zA-Z0-9.-]/g, '_');;
+    const safeId = info.id.replace(/[^a-zA-Z0-9.-]/g, '_');
 
-    // 2. 決定儲存檔名 (使用 id_version.zip 格式避免檔名衝突)
     const safeFileName = `${safeId}_v${info.version}.zip`;
     const savePath = path.join(getUploadPath(), safeFileName);
     
-    // 3. 寫入實體檔案
     await writeFile(savePath, buffer);
 
-    // 4. 更新資料庫
+    // 獲取 Host (例如: localhost:3000 或 example.com)
+    const host = request.headers.get('host');
+    // 判斷協議 (若有反向代理如 Nginx 則讀取 x-forwarded-proto，否則預設 http)
+    const protocol = request.headers.get('x-forwarded-proto') ?? 'http';
+    const baseUrl = `${protocol}://${host}`;
+    
+    const absoluteDownloadUrl = `${baseUrl}/api/download/${safeFileName}`;
+
     const newRecord: ModuleRecord = {
       ...info,
       fileName: safeFileName,
-      downloadUrl: `/api/download/${safeFileName}`,
+      downloadUrl: absoluteDownloadUrl,
       uploadDate: new Date().toISOString(),
       size: file.size,
     };

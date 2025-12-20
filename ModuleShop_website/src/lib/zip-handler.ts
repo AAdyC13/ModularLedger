@@ -4,28 +4,24 @@ import { ModuleInfo } from '@/types/module';
 
 export const parseModuleZip = async (buffer: Buffer): Promise<ModuleInfo> => {
   const zip = new AdmZip(buffer);
-  const zipEntries = zip.getEntries();
+  
+  // 直接獲取根目錄下的 info.json，若檔案在資料夾內則會回傳 null
+  const infoEntry = zip.getEntry('info.json');
+
+  if (!infoEntry || infoEntry.isDirectory) {
+    throw new Error('壓縮檔根目錄未找到有效的 info.json');
+  }
+
   let infoJson: ModuleInfo | null = null;
-
-  // 遍歷 Zip 內容尋找 info.json
-  for (const entry of zipEntries) {
-    // 忽略 macOS 系統產生的隱藏資料夾，並尋找 info.json
-    if (entry.entryName.endsWith('info.json') && !entry.entryName.includes('__MACOSX')) {
-      try {
-        const content = entry.getData().toString('utf8');
-        infoJson = JSON.parse(content);
-        break; // 找到就停止
-      } catch (e) {
-        console.error("JSON parse error in zip", e);
-      }
-    }
+  
+  try {
+    const content = infoEntry.getData().toString('utf8');
+    infoJson = JSON.parse(content);
+  } catch (e) {
+    console.error("JSON parse error in zip", e);
+    throw new Error('info.json 解析失敗，請確認格式正確');
   }
 
-  if (!infoJson) {
-    throw new Error('壓縮檔內未找到有效的 info.json');
-  }
-
-  // 基本驗證
   if (!infoJson.id || !infoJson.version) {
     throw new Error('info.json 格式錯誤：缺少 id 或 version 欄位');
   }
