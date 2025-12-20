@@ -1,20 +1,13 @@
 {
 	"permissions": ["readState", "writeState", "localStorage"],
-	"blueprints": [
-		
-	],
+	"blueprints": [],
 	"components": [
 		{
-			"name": "Calendar",	
-			"type": "Panel",
-			"entry": "",
-			"html_template": "",
-			"css_template": "",
-			"panel_location": {
-				"pageID": "systemPage.Settings",
-				"slot": "page-content"
-			},
-
+			"name": "Main",
+			"type": "Page",
+			"entry": "ShopPage.js",
+			"html_template": "ShopPage.html",
+			"css_template": "ShopPage.css",
 			"component_dependencies": []
 		}
 	],
