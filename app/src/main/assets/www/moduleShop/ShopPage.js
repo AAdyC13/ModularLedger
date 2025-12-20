@@ -13,7 +13,7 @@ export class ShopPage extends BasePage {
         });
         
         // 設定伺服器位址
-        this.serverUrl = 'http://163.18.26.227:3000'; 
+        this.serverUrl = 'http://163.18.26.227:3001'; 
     }
 
     async init() {
