@@ -58,6 +58,15 @@
 	--sys-footer-bg: var(--c6);
 	--sys-footer-color: var(--c9);
 	--sys-footer-border-top: 5px solid var(--c8);
+	/* loading-page */
+	--sys-loading-page-bg: var(--sys-main-bg);
+	--sys-loading-page-title1-color: var(--sys-body-color);
+	--sys-loading-page-title2-color: var(--sys-header-bg);
+	/* log */
+	--sys-logtext-info: var(--sys-main-color);
+	--sys-logtext-debug: #888;
+	--sys-logtext-warn: #ffc107;
+	--sys-logtext-error: #ff0000;
 
 	/* ====== components.css ====== */
 	/* button */

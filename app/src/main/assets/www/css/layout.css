@@ -99,3 +99,94 @@ footer.sys-footer-toolbar > * {
 	flex: 1;
 	min-width: 0;
 }
+
+/* ==========================================
+   加載頁面樣式
+   ========================================== */
+@keyframes sys-loading-fade-in {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+
+.sys-loading-page {
+	position: absolute;
+	display: flex;
+	height: 100%;
+	width: 100%;
+	flex-direction: column;
+	align-items: stretch;
+	background: var(--sys-loading-page-bg);
+	padding: 2rem;
+	box-sizing: border-box;
+	z-index: 9999;
+
+	/* Animation */
+	animation: sys-loading-fade-in 0.5s ease-in;
+	transition: opacity 0.5s ease-out;
+}
+
+.sys-loading-page.hidden {
+	/* Override .hidden to allow fade-out transition */
+	display: flex !important;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+}
+.sys-loading-page-title1 {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 2.2rem;
+	font-weight: 1000;
+	color: var(--sys-body-color);
+	padding-top: 2rem;
+}
+.sys-loading-page-title2 {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: var(--sys-header-bg);
+	padding-bottom: 1.5rem;
+}
+.sys-loading-page-logger {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	font-size: 0.9rem;
+	color: var(--sys-header-color);
+	border: 1px solid var(--cb);
+	border-radius: 4px;
+	padding: 1rem;
+	box-sizing: border-box;
+}
+
+.sys-loading-page-subtitle {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 1rem;
+	font-weight: 400;
+	color: var(--sys-header-bg);
+	margin-top: auto;
+	padding-top: 1rem;
+}
+
+/* ==========================================
+   log 文字框樣式
+   ========================================== */
+.log-debug {
+	color: var(--sys-logtext-debug);
+}
+.log-warn {
+	color: var(--sys-logtext-warn);
+}
+.log-error {
+	color: var(--sys-logtext-error);
+}
+.log-info {
+	color: var(--sys-logtext-info);
+}

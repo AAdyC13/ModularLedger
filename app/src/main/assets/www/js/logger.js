@@ -1,6 +1,15 @@
 class LoggerManager {
     constructor() {
         this.level = 'DEBUG';
+        this.logListeners = [];
+    }
+
+    addLogListener(callback) {
+        this.logListeners.push(callback);
+    }
+
+    setUiAgent(uiAgent) {
+        this.uiAgent = uiAgent;
     }
 
     shouldLog(level) {
@@ -8,33 +17,42 @@ class LoggerManager {
         return levels.indexOf(level) >= levels.indexOf(this.level);
     }
 
-    output(type, message) {
-        switch (type) {
-            case 'DEBUG': {
-                console.debug(message);
-                break;
-            }
-            case 'INFO': {
-                console.log(message);
-                break;
-            }
-            case 'WARN': {
-                console.warn(message);
-                break;
-            }
-            case 'ERROR': {
-                console.error(message);
-                break;
-            }
-            case 'DEBUG_AUTO': {
-                console.debug(message);
-                break;
-            }
-            default: {
-                console.log(message);
-            }
+    output(type, moduleName, ...args) {
+        // 1. Normal console log, with multi-argument support
+        const consoleLogMethod = {
+            'DEBUG': console.info,
+            'INFO': console.info,
+            'WARN': console.info,
+            'ERROR': console.info,
+            'DEBUG_AUTO': console.info
+        }[type] || console.info;
+        consoleLogMethod(`[${moduleName}]`, ...args);
+
+        // 2. Forward formatted log to in-app listeners
+        if (this.logListeners.length > 0) {
+            const d = new Date();
+            const time = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+            const messageString = args.map(arg => {
+                if (typeof arg === 'object' && arg !== null) {
+                    try {
+                        return JSON.stringify(arg);
+                    } catch (e) {
+                        return '[Unserializable Object]';
+                    }
+                }
+                return String(arg);
+            }).join(' ');
+
+            const formattedMessage = `[${time}] [${type}] [${moduleName}] ${messageString}`;
+
+            this.logListeners.forEach(listener => {
+                try {
+                    listener(type, formattedMessage);
+                } catch (e) {
+                    console.error('Error in log listener:', e);
+                }
+            });
         }
-        // 這裡可改成 file 或 server
     }
 
     /**
@@ -82,74 +100,41 @@ export class Logger {
     }
 
     /**
-     * 格式化日誌訊息
-     * @private
-     * @param {string} level - 日誌等級，如 'INFO', 'DEBUG', 'ERROR'
-     * @param {string} message - 要輸出的日誌訊息
-     * @returns {string} 格式化後的日誌字串
-     */
-    format(level, message) {
-        const time = new Date().toISOString();
-        return `[${time}] [${level}] [${this.moduleName}] ${message}`;
-    }
-
-    /**
-     * 處理參數數量錯誤
-     * @private
-     * @param {string} funcName - 函數名稱
-     * @param {string} msg - 參數描述
-     */
-    errorHandler(funcName, msg) {
-        this.error(`Logger.${funcName} ${msg}`);
-        throw new Error(`Logger.${funcName} ${msg}`);
-    }
-
-    /**
      * 根據日誌等級輸出訊息
      * @private
-     * @param {string} level - 日誌等級
-     * @param {string} message - 日誌訊息
      */
-    log(level, message) {
+    log(level, ...args) {
         if (loggerManager.shouldLog(level)) {
-            loggerManager.output(level, this.format(level, message));
+            loggerManager.output(level, this.moduleName, ...args);
         }
     }
 
     /**
      * 輸出 DEBUG 級別日誌
-     * @param {string} message - 日誌訊息
      */
-    debug(message) {
-        if (arguments.length !== 1) this.errorHandler('debug', 'expects exactly one argument');
-        this.log('DEBUG', message);
+    debug(...args) {
+        this.log('DEBUG', ...args);
     }
 
     /**
      * 輸出 INFO 級別日誌
-     * @param {string} message - 日誌訊息
      */
-    info(message) {
-        if (arguments.length !== 1) this.errorHandler('info', 'expects exactly one argument');
-        this.log('INFO', message);
+    info(...args) {
+        this.log('INFO', ...args);
     }
 
     /**
      * 輸出 WARN 級別日誌
-     * @param {string} message - 日誌訊息
      */
-    warn(message) {
-        if (arguments.length !== 1) this.errorHandler('warn', 'expects exactly one argument');
-        this.log('WARN', message);
+    warn(...args) {
+        this.log('WARN', ...args);
     }
 
     /**
      * 輸出 ERROR 級別日誌
-     * @param {string} message - 日誌訊息
      */
-    error(message) {
-        if (arguments.length !== 1) this.errorHandler('error', 'expects exactly one argument');
-        this.log('ERROR', message);
+    error(...args) {
+        this.log('ERROR', ...args);
     }
 
     debugA(message) {
