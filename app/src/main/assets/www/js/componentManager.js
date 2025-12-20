@@ -2,10 +2,11 @@ const GLOBAL_OBJECT = typeof globalThis !== 'undefined' ? globalThis : window;
 import { Logger } from './logger.js';
 
 export class ComponentManager {
-    constructor(logger, eventAgent, bridge) {
+    constructor(logger, eventAgent, bridge, uiAgent) {
         this.logger = logger;
         this.eventAgent = eventAgent;
         this.bridge = bridge;
+        this.ui = uiAgent;
         this.components = {};
         this.eventPlatform = new EventPlatform();
 
