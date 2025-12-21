@@ -16,22 +16,29 @@ export class ModulesManager {
     /**
      * 初始化模組管理器
      */
-    init(logger_forModule) {
+    async init(logger_forModule) {
+        this.logger.debugA('Initializing ModulesManager...');
         this.eventAgent.on('CM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('EM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('PM:analysis_complete', this.handleAnalysisComplete.bind(this));
+        this.logger.debugA('Initializing ModulesManager...');
         try {
-            const schema = this.bridge.callSync('getSchema', 'module-info.schema');
-            const techSchema = this.bridge.callSync('getSchema', 'module-tech.schema');
-            //this.logger.debug(`Module schema loaded: ${typeof schema}, content: ${JSON.stringify(schema)}`);
+            const schema = await this.bridge.getSchema('module-info.schema');
+            const techSchema = await this.bridge.getSchema('module-tech.schema');
+            this.logger.debugA('Initializing ModulesManager...');
+            // this.logger.debug(`Module schema loaded: ${typeof schema}, content: ${JSON.stringify(schema)}`);
+            if (!schema || !techSchema) {
+                throw new Error('Failed to load module schema from Android');
+            }
             Module.init(logger_forModule, schema, techSchema);
+            this.logger.debugA('Initializing ModulesManager...');
         } catch (error) {
             this.logger.error('Failed to load Module schema: ' + error.message);
             this.schemaLoadFailed = true;
             this.logger.warn('Module loading will be restricted to whitelist only');
         }
 
-        this.loadSystemModules();
+        await this.loadSystemModules();
         const summaries = Object.values(this.moduleDict)
             .map(m => `  - ${m.getSummary()}`)
             .join('\n');
@@ -77,9 +84,9 @@ export class ModulesManager {
      * 載入系統模組清單
      * @returns {Array<Module>} 模組清單
      */
-    loadSystemModules() {
+    async loadSystemModules() {
         try {
-            const list = this.bridge.callSync('getSystemModulesList');
+            const list = await this.bridge.getSystemModulesList();
 
             if (!list) {
                 this.logger.warn('Failed to get system modules list from Android');
@@ -135,7 +142,7 @@ export class ModulesManager {
         try {
             const mods = this.modFindByIds(modIds)
             const filenNames = mods.map(m => m.folderName);
-            const techs = this.bridge.callSync('getTechs', filenNames);
+            const techs = await this.bridge.getTechs(filenNames);
             mods.forEach((mod) => {
 
                 const techData = techs[mod.folderName];
@@ -263,17 +270,9 @@ class Module {
      */
     static init(logger, schema, techSchema) {
         Module.logger = logger
-        if (Module.schema !== null) return;
-        if (!schema) {
-            throw new Error('Failed to load module schema from Android');
-        }
-        try {
-            Module.schema = schema;
-            Module.techSchema = techSchema;
-            Module.logger.debug('Module schema loaded successfully');
-        } catch (error) {
-            throw new Error('Failed to parse module schema: ' + error.message);
-        }
+        Module.schema = schema;
+        Module.techSchema = techSchema;
+
     }
 
     constructor(data, skipValidation = false) {
