@@ -90,11 +90,9 @@ class AndroidBridge(
                 for (i in 0 until fileNames.length()) {
                     names.add(fileNames.optString(i))
                 }
-                // 讀取 Tech 設定 (會過濾掉未啟用的模組)
                 loadTechs(names)
             }
             "SYS:getSystemModulesList" -> {
-                // 重新讀取並回傳完整列表 (含啟用狀態)
                 worker.reloadModules(database.moduleDao())
                 JSONArray(worker.systemModulesList)
             }
@@ -106,7 +104,6 @@ class AndroidBridge(
                 success
             }
             "SYS:toggleModule" -> {
-                // 新增：切換模組狀態
                 val id = payload.optString("id")
                 val enable = payload.optBoolean("enable")
                 database.moduleDao().updateModuleStatus(id, enable)
@@ -116,6 +113,14 @@ class AndroidBridge(
             "SYS:getSchema" -> {
                 val name = payload.optString("name")
                 worker.schemas[name] ?: JSONObject()
+            }
+            // [新增] 支援 Toast 顯示
+            "SYS:showToast" -> {
+                val message = payload.optString("message")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
+                true
             }
             "SYS:getDeviceInfo" -> JSONObject().apply {
                 put("brand", android.os.Build.BRAND)
@@ -140,11 +145,10 @@ class AndroidBridge(
         for (name in names) {
             try {
                 val modInfo = moduleMap[name]
-                // 關鍵：檢查是否啟用
                 val isEnabled = modInfo?.get("isEnabled") as? Boolean ?: true
                 
                 if (!isEnabled) {
-                    techsMap[name] = JSONObject() // 回傳空物件，前端就不會載入此模組
+                    techsMap[name] = JSONObject()
                     continue
                 }
 
@@ -178,6 +182,7 @@ class AndroidBridge(
     }
 
     private fun performInstall(urlString: String): Boolean {
+        // [修正] 改為使用純 URL 物件，避免自動編碼問題
         val url = URL(urlString)
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "GET"
@@ -214,7 +219,7 @@ class AndroidBridge(
                     tempExtractDir.copyRecursively(targetDir, overwrite = true)
                 }
 
-                // 寫入資料庫 (預設啟用)
+                // 寫入資料庫
                 val entity = ModuleEntity(
                     id = modId,
                     name = jsonObject.optString("name", "Unknown"),
@@ -276,7 +281,6 @@ class AndroidBridge(
         return JSONObject().put("content", content).toString()
     }
 
-    // 輔助方法保持與之前相同
     private fun getAppVersion() = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" } catch (e: Exception) { "" }
     private fun checkNetworkStatus(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
@@ -295,14 +299,12 @@ class BackgroundWorker(private val context: Context) {
     fun reloadModules(moduleDao: ModuleDao) {
         val modules = mutableListOf<Map<String, Any>>()
         
-        // 載入系統模組 (預設啟用)
         loadAssetsModules().forEach { 
             val m = it.toMutableMap()
             m["isEnabled"] = true
             modules.add(m)
         }
 
-        // 載入使用者模組 (從 DB 讀取狀態)
         try {
             moduleDao.getAllModulesSync().forEach { entity ->
                 modules.add(mapOf(

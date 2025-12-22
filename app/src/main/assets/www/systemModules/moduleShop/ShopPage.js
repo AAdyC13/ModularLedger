@@ -135,22 +135,26 @@ export default class ShopPage {
         btnElement.disabled = true;
         btnElement.innerText = '下載中...';
         
-        // 確保 bridge 存在再呼叫 showToast
+        // [修正] 改用 callAsync 呼叫 Toast，避免 showToast 不存在的問題
         if (this.bridge) {
-            this.bridge.showToast('開始下載模組...');
-        } else {
-            console.warn('[Shop] Bridge not initialized');
+            try {
+                // 嘗試呼叫原生的 Toast (方法名稱需對應 Android 端)
+                await this.bridge.callAsync('SYS:showToast', { message: '開始下載模組...' });
+            } catch (e) {
+                console.warn('Toast call failed', e);
+            }
         }
 
         try {
-            // 2. 呼叫 Bridge 的異步方法執行原生下載與安裝邏輯
-            // 這邊使用了 callAsync，它是我們之前在 bridge.js 中新增的方法
             if (!this.bridge) throw new Error('Bridge is not initialized');
 
-            const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000); // 設定 30秒 timeout 以防下載過久
+            // 呼叫原生下載
+            const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000);
             
             if (result === true) {
-                this.bridge.showToast('安裝成功！請至模組設置啟用。');
+                // [修正] 同樣改用 callAsync
+                await this.bridge.callAsync('SYS:showToast', { message: '安裝成功！請至模組設置啟用。' });
+                
                 btnElement.innerText = '已安裝';
                 btnElement.classList.add('installed');
             } else {
@@ -159,7 +163,8 @@ export default class ShopPage {
         } catch (error) {
             this.logger.error(`[Shop] Install failed: ${error}`);
             if (this.bridge) {
-                this.bridge.showToast('安裝失敗: ' + (error.message || '未知錯誤'));
+                 // [修正] 同樣改用 callAsync
+                await this.bridge.callAsync('SYS:showToast', { message: '安裝失敗: ' + (error.message || '未知錯誤') });
             }
             btnElement.disabled = false;
             btnElement.innerText = originalText;
