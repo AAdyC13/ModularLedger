@@ -2,7 +2,6 @@ import { Bridge } from '../../js/bridge.js';
 
 export default class ShopPage {
     constructor() {
-        // 保留原先屬性
         this.serverUrl = 'http://163.18.26.227:3001'; 
         this.dom = null; 
         this.logger = console;
@@ -13,7 +12,8 @@ export default class ShopPage {
         this.dom = agentInterface.myDOM;
         this.logger = agentInterface.tools.logger || console;
         
-        // 優先使用系統傳入的 Bridge，若無則降級建立新實例
+        // 1. 優先使用從 SettingHubView 傳遞下來的 bridge，若無則降級建立新實例
+        // 這是關鍵修正：確保與 ComponentManager 傳遞的 bridge 一致
         this.bridge = agentInterface.bridge || new Bridge(this.logger);
 
         if (!this.dom) {
@@ -134,12 +134,20 @@ export default class ShopPage {
         const originalText = btnElement.innerText;
         btnElement.disabled = true;
         btnElement.innerText = '下載中...';
-        this.bridge.showToast('開始下載模組...');
+        
+        // 確保 bridge 存在再呼叫 showToast
+        if (this.bridge) {
+            this.bridge.showToast('開始下載模組...');
+        } else {
+            console.warn('[Shop] Bridge not initialized');
+        }
 
         try {
-            // 使用 Bridge 的異步方法呼叫原生下載與安裝邏輯
-            // 對應 AndroidBridge.kt 中的 SYS:installModule
-            const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000);
+            // 2. 呼叫 Bridge 的異步方法執行原生下載與安裝邏輯
+            // 這邊使用了 callAsync，它是我們之前在 bridge.js 中新增的方法
+            if (!this.bridge) throw new Error('Bridge is not initialized');
+
+            const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000); // 設定 30秒 timeout 以防下載過久
             
             if (result === true) {
                 this.bridge.showToast('安裝成功！請至模組設置啟用。');
@@ -150,7 +158,9 @@ export default class ShopPage {
             }
         } catch (error) {
             this.logger.error(`[Shop] Install failed: ${error}`);
-            this.bridge.showToast('安裝失敗: ' + (error.message || '未知錯誤'));
+            if (this.bridge) {
+                this.bridge.showToast('安裝失敗: ' + (error.message || '未知錯誤'));
+            }
             btnElement.disabled = false;
             btnElement.innerText = originalText;
         }

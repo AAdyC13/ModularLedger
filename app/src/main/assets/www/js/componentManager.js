@@ -159,7 +159,8 @@ export class ComponentManager {
             new TimerBucket(),
             new Logger(`Component:${id}`),
             new ListenerRegistry(),
-            compTech.panel_location
+            compTech.panel_location,
+            this.bridge
         );
         if (dom) {
             this.componentsByPage[compTech.panel_location.pageID] ??= new Set();
@@ -251,7 +252,7 @@ class ComponentAgent {
     constructor(
         id, type, modID, dependenciesComponent = [],
         ComponentObject, dom = null, eventPlatform, timerBucket, logger, listenerRegistry,
-        panel_location = null) {
+        panel_location = null,bridge = null) {
         this.id = id;
         this.type = type;
         this.modID = modID;
@@ -265,6 +266,8 @@ class ComponentAgent {
         this.object = ComponentObject; 
         this.dom = dom; 
         this.panel_location = panel_location;
+        this.bridge = bridge;
+
 
     }
     async init() {
@@ -276,8 +279,14 @@ class ComponentAgent {
         if (this.dom) {
             myDOM = ComponentAgent.createProxyDOM(this.dom, this.listenerRegistry);
         }
+
+        if (!this.bridge) {
+            this.logger.warn(`Component [${this.id}] initialized without bridge!`);
+        }
+
         this.interface = {
             myDOM: myDOM,
+            bridge: this.bridge,
             tools: {
                 timer: this.timerBucket,
                 logger: this.logger

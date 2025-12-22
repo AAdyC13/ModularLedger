@@ -6,8 +6,8 @@ export default class SettingHubView {
         this.container = null;
         this.eventPlatform = null;
         this.containerChecked = false;
+        this.bridge = null;
 
-        // 保留原先配置，僅修改 methodName 以便觸發對應功能
         this.options = [
             {
                 name: "介面與主題",
@@ -20,11 +20,11 @@ export default class SettingHubView {
             },
             {
                 name: "模組設置",
-                description: "管理已安裝模組的設置和偏好選項。",
+                description: "管理已安裝模組的設置和啟用狀態。",
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "SettingHub",
-                    methodName: "openModuleSettings" // 修改此處
+                    methodName: "openModuleSettings"
                 },
             },
             {
@@ -33,7 +33,7 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "SettingHub",
-                    methodName: "openModuleShop" // 修改此處
+                    methodName: "openModuleShop"
                 },
             },
             {
@@ -79,7 +79,8 @@ export default class SettingHubView {
         this.Agent = Agent;
         this.logger = Agent.tools.logger;
         this.eventPlatform = Agent.eventPlatform;
-        this.bridge = Agent.bridge; // 取得 Bridge 實例
+        this.bridge = Agent.bridge; 
+        
         this.setOnEvents();
         this.logger.debug(`SettingHubView initialized`);
         return true;
@@ -94,77 +95,122 @@ export default class SettingHubView {
             if (!this.containerChecked) {
                 this.container = data.dom;
                 this.containerChecked = true;
-                this.optionsGenerator();
+                this.renderMainMenu();
             }
         });
     }
 
-    /**
-     * 處理選項點擊事件
-     */
     async optionsHandler(data) {
         this.logger.debug(`Option handler called: ${data.methodName}`);
-        
         switch (data.methodName) {
             case 'openModuleShop':
-                await this.renderModuleShop();
+                await this.openModuleShop();
                 break;
             case 'openModuleSettings':
-                await this.renderModuleSettings();
+                await this.openModuleSettings();
+                break;
+            case 'theme':
+                this.bridge.showToast('功能開發中...');
                 break;
             default:
-                this.Agent.bridge.showToast('此功能尚未開放或正在開發中');
+                this.bridge.showToast('此功能尚未開放');
                 break;
         }
     }
 
-    /**
-     * 功能：載入並顯示模組商店
-     */
-    async renderModuleShop() {
+    renderMainMenu() {
         const contentContainer = this.container.querySelector('#setting-main');
-        contentContainer.innerHTML = '<div class="loading">正在載入商店...</div>';
-        this.updateHeader('模組商店', true);
+        if (!contentContainer) return;
 
-        try {
-            // 載入 HTML 模板 (需確保 Bridge 支援 fetchSystemModules)
-            const html = await this.bridge.fetchSystemModules('moduleShop/ShopPage.html');
-            if (html) {
-                contentContainer.innerHTML = html;
-                
-                // 初始化商店邏輯
-                const shopPage = new ShopPage();
-                
-                // 傳遞 Agent 環境，並確保 myDOM 指向當前容器
-                const shopInterface = {
-                    ...this.Agent,
-                    myDOM: contentContainer,
-                    // 模擬 systemRadio 的掛載事件，立即觸發刷新
-                    systemRadio: {
-                        myDOM_onMount: (cb) => cb() 
-                    }
-                };
+        contentContainer.innerHTML = '';
+        contentContainer.className = 'setting-main'; 
 
-                await shopPage.init(shopInterface);
-            } else {
-                throw new Error("無法讀取商店頁面模板");
+        const list = document.createElement('div');
+        list.className = 'setting-list';
+
+        this.options.forEach(option => {
+            const item = document.createElement('div');
+            item.className = 'setting-item';
+            item.innerHTML = `
+                <div class="setting-info">
+                    <h3>${option.name}</h3>
+                    <p>${option.description}</p>
+                </div>
+                <button class="setting-option-btn">開啟</button>
+            `;
+            
+            const btn = item.querySelector('button');
+            // 綁定點擊事件
+            if (option.handler) {
+                btn.onclick = () => this.optionsHandler(option.handler);
             }
+
+            list.appendChild(item);
+        });
+
+        contentContainer.appendChild(list);
+        this.updateHeader('設定集成面板', false);
+    }
+
+    updateHeader(title, showBack) {
+        const headerTitle = this.container.querySelector('.sys-label-header-title');
+        if (headerTitle) headerTitle.textContent = title;
+
+        const backBtn = this.container.querySelector('#back-btn');
+        if (backBtn) {
+            const newBtn = backBtn.cloneNode(true);
+            backBtn.parentNode.replaceChild(newBtn, backBtn);
+            
+            if (showBack) {
+                newBtn.disabled = false;
+                newBtn.onclick = () => this.renderMainMenu();
+            } else {
+                newBtn.disabled = true;
+            }
+        }
+    }
+
+    // ============================================================
+    // 功能：模組商店
+    // ============================================================
+    async openModuleShop() {
+        const contentContainer = this.container.querySelector('#setting-main');
+        contentContainer.innerHTML = '<div class="loading">載入商店中...</div>';
+        this.updateHeader('模組商店', true);
+        
+        try {
+            // 這裡會使用到 this.bridge，如果 init 沒存好就會報錯
+            const htmlContent = await this.bridge.fetchSystemModules('moduleShop/ShopPage.html', 'text');
+            if (!htmlContent) throw new Error('無法載入商店介面模板');
+
+            contentContainer.innerHTML = htmlContent;
+
+            const shopPage = new ShopPage();
+            const shopInterface = {
+                ...this.Agent,
+                myDOM: contentContainer, 
+                systemRadio: {
+                    myDOM_onMount: (cb) => cb() 
+                }
+            };
+            
+            await shopPage.init(shopInterface);
+
         } catch (e) {
-            this.logger.error(`Failed to load shop: ${e}`);
+            this.logger.error(e);
             contentContainer.innerHTML = `<div class="error">載入失敗: ${e.message}</div>`;
         }
     }
 
-    /**
-     * 功能：載入並顯示模組設置 (啟用/停用)
-     */
-    async renderModuleSettings() {
+    // ============================================================
+    // 功能：模組設置 (啟用/停用)
+    // ============================================================
+    async openModuleSettings() {
         const contentContainer = this.container.querySelector('#setting-main');
         contentContainer.innerHTML = '<div class="loading">讀取模組清單...</div>';
         this.updateHeader('模組設置', true);
 
         try {
-            // 獲取系統模組清單 (包含 isEnabled 狀態)
             const modules = await this.bridge.getSystemModulesList();
             
             contentContainer.innerHTML = '';
@@ -172,30 +218,27 @@ export default class SettingHubView {
             list.className = 'setting-list';
 
             if (!modules || modules.length === 0) {
-                list.innerHTML = '<div class="empty">目前沒有安裝任何模組</div>';
+                list.innerHTML = '<div class="empty">無已安裝模組</div>';
             } else {
                 modules.forEach(mod => {
                     const item = document.createElement('div');
                     item.className = 'setting-item module-item';
-                    
-                    // 檢查啟用狀態，若無此欄位則預設為 true
                     const isEnabled = mod.isEnabled !== false; 
 
                     item.innerHTML = `
                         <div class="setting-info">
-                            <h3>${mod.name} <span class="version">v${mod.version}</span></h3>
+                            <h3>${mod.name} <span style="font-size:0.8em;color:#666">v${mod.version}</span></h3>
                             <p>${mod.description || '無描述'}</p>
-                            <span class="meta-tag">${mod.sourceType === 'system' ? '系統內建' : '使用者安裝'}</span>
+                            <p style="font-size:0.8em;color:#888">ID: ${mod.id} (${mod.sourceType})</p>
                         </div>
                         <div class="setting-action">
                             <label class="switch">
-                                <input type="checkbox" ${isEnabled ? 'checked' : ''} data-id="${mod.id}">
+                                <input type="checkbox" ${isEnabled ? 'checked' : ''}>
                                 <span class="slider round"></span>
                             </label>
                         </div>
                     `;
                     
-                    // 綁定切換事件
                     const toggle = item.querySelector('input');
                     toggle.addEventListener('change', (e) => {
                         this.handleModuleToggle(mod.id, e.target.checked);
@@ -207,82 +250,20 @@ export default class SettingHubView {
             contentContainer.appendChild(list);
 
         } catch (e) {
-            this.logger.error(`Failed to load settings: ${e}`);
+            this.logger.error(e);
             contentContainer.innerHTML = `<div class="error">讀取失敗: ${e.message}</div>`;
         }
     }
 
-    /**
-     * 處理模組啟用/停用
-     */
     async handleModuleToggle(moduleId, enable) {
+        this.logger.debug(`Toggling module ${moduleId} to ${enable}`);
         try {
-            // 呼叫 Android 端更新資料庫狀態
             await this.bridge.callAsync('SYS:toggleModule', { id: moduleId, enable: enable });
             this.bridge.showToast(enable ? '模組已啟用 (重啟後生效)' : '模組已停用 (重啟後生效)');
         } catch (e) {
-            this.logger.error(`Toggle failed: ${e}`);
-            this.bridge.showToast('設定失敗，請重試');
-            // 失敗時重新載入清單以回復 UI 狀態
-            this.renderModuleSettings();
+            this.logger.error(`Failed to toggle module: ${e.message}`);
+            this.bridge.showToast('設定失敗');
+            await this.openModuleSettings(); 
         }
-    }
-
-    updateHeader(title, showBack) {
-        const headerTitle = this.container.querySelector('.sys-label-header-title');
-        if (headerTitle) headerTitle.textContent = title;
-
-        const backBtn = this.container.querySelector('#back-btn');
-        if (backBtn) {
-            // 複製按鈕以移除舊的事件監聽器
-            const newBtn = backBtn.cloneNode(true);
-            backBtn.parentNode.replaceChild(newBtn, backBtn);
-            
-            if (showBack) {
-                newBtn.disabled = false;
-                newBtn.classList.remove('disabled');
-                newBtn.onclick = () => this.restoreMainMenu();
-            } else {
-                newBtn.disabled = true;
-                newBtn.classList.add('disabled');
-            }
-        }
-    }
-
-    restoreMainMenu() {
-        this.optionsGenerator(); // 重新渲染主選單
-        this.updateHeader('設定集成面板', false);
-    }
-
-    optionsGenerator() {
-        const contentContainer = this.container.querySelector('#setting-main');
-        contentContainer.innerHTML = ''; // 清空內容
-
-        this.options.forEach(option => {
-            const btn = document.createElement('button');
-            btn.className = 'setting-option-btn';
-            btn.textContent = option.name;
-
-            // 設置 dataset 供 click handler 使用
-            if (option.handler) {
-                btn.dataset.moduleId = option.handler.moduleID;
-                btn.dataset.componentName = option.handler.componentName;
-                btn.dataset.methodName = option.handler.methodName;
-            }
-
-            contentContainer.appendChild(btn);
-        });
-
-        // 重新綁定事件
-        contentContainer.onclick = (e) => {
-            if (e.target.classList.contains('setting-option-btn')) {
-                const { moduleId, componentName, methodName } = e.target.dataset;
-                this.optionsHandler({
-                    moduleID: moduleId,
-                    componentName: componentName,
-                    methodName: methodName
-                });
-            }
-        };
     }
 }

@@ -1,41 +1,17 @@
-.shop-page {
+/* ShopPage.css */
+#shop-container {
     padding: 20px;
-    background-color: #f5f7fa;
     height: 100%;
     overflow-y: auto;
-    box-sizing: border-box;
-}
-
-.shop-page .header {
-    margin-bottom: 20px;
-}
-
-.shop-page h2 {
-    margin: 0;
-    color: #333;
-}
-
-.subtitle {
-    color: #666;
-    font-size: 0.9em;
-    margin-top: 5px;
-}
-
-.module-list {
-    display: grid;
-    gap: 15px;
+    color: var(--text-primary);
 }
 
 .module-card {
-    background: white;
+    background: rgba(255, 255, 255, 0.05);
     border-radius: 12px;
     padding: 15px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    transition: transform 0.2s;
-}
-
-.module-card:active {
-    transform: scale(0.98);
+    margin-bottom: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .card-header {
@@ -47,63 +23,62 @@
 
 .card-header h3 {
     margin: 0;
-    font-size: 1.1em;
-    color: #2c3e50;
+    font-size: 1.1rem;
+    color: var(--text-primary);
 }
 
 .version {
-    background: #e3f2fd;
-    color: #1976d2;
+    font-size: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
     padding: 2px 8px;
     border-radius: 10px;
-    font-size: 0.8em;
 }
 
 .desc {
-    color: #555;
-    font-size: 0.9em;
-    line-height: 1.4;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
     margin-bottom: 15px;
+    line-height: 1.4;
 }
 
 .meta {
-    font-size: 0.8em;
-    color: #999;
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
     margin-bottom: 15px;
 }
 
 .btn-install {
     width: 100%;
     padding: 10px;
+    background: var(--primary-color);
+    color: white;
     border: none;
     border-radius: 8px;
-    background-color: #4CAF50;
-    color: white;
-    font-weight: bold;
+    font-size: 1rem;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: opacity 0.2s;
 }
 
 .btn-install:disabled {
-    background-color: #ccc;
+    opacity: 0.7;
     cursor: not-allowed;
 }
 
 .btn-install.installed {
-    background-color: #45a049;
+    background: #4CAF50;
 }
 
 .shop-loading, .shop-error, .shop-empty {
     text-align: center;
-    padding: 40px;
-    color: #666;
+    padding: 40px 0;
+    color: var(--text-secondary);
 }
 
-.shop-error {
-    color: #d32f2f;
-}
-
-#retry-btn {
-    margin-top: 10px;
-    padding: 5px 15px;
+.shop-error button {
+    margin-top: 15px;
+    padding: 8px 20px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 6px;
 }
