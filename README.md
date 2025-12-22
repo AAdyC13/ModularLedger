@@ -1,7 +1,7 @@
 # ModularLedger
 模組化記帳系統
 
-# ⚖️ License / 授權說明
+## ⚖️ License / 授權說明
 
 This software is **Source Available** and free for personal, educational, and internal use. It is licensed under the [Apache License 2.0](LICENSE) combined with the **Commons Clause**.
 
@@ -14,5 +14,3 @@ This software is **Source Available** and free for personal, educational, and in
 * **Sell** the source code or the binary releases.
 * Offer this software as a **paid service** (e.g., SaaS, Hosting).
 * Wrap this software in a proprietary package and sell it.
-
-**Contact:** [aadycheng@gmail.com]
