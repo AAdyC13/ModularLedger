@@ -2,7 +2,6 @@ package com.example.ModularLedger
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -28,7 +27,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d("MainActivity", "onCreate called")
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         WebView.setWebContentsDebuggingEnabled(true)
@@ -103,8 +101,13 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        // val database = AppDatabase.expenseDao()
+
+        // val repository = LedgerRepository(database.expenseDao())
+        val worker = BackgroundWorker(this)
+
         webView.addJavascriptInterface(
-                AndroidBridge(this, BackgroundWorker(this), java.lang.ref.WeakReference(webView)),
+                AndroidBridge(this, worker, java.lang.ref.WeakReference(webView)),
                 "AndroidBridge"
         )
 

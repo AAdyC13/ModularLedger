@@ -1,27 +1,27 @@
-import { Logger } from './logger.js';
-
 let uiManagerInstance = null;
 
-class UIManager {
+export default class UIManager {
     constructor() {
+        this.logger = null;
+        this.eventHub = null;
+        this.toastContainer = null;
         if (uiManagerInstance) {
             return uiManagerInstance;
         }
-        this.isInitialized = false;
         uiManagerInstance = this;
+        this.isInitialized = false;
     }
 
     init(logger, eventHub) {
-        this.logger = logger || new Logger('UIManager');
+        this.logger = logger;
         this.eventHub = eventHub;
 
         // 建立 Toast 容器
         this.toastContainer = document.createElement('div');
         this.toastContainer.className = 'sys-toast-container';
         document.body.appendChild(this.toastContainer);
-
         this.isInitialized = true;
-        this.logger.info('UIManager initialized');
+        this.logger.debug('UIManager initialized');
     }
 
     createAgent(moduleName) {

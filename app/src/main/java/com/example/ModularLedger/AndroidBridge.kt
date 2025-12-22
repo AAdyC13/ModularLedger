@@ -21,7 +21,8 @@ import org.json.JSONObject
 class AndroidBridge(
         private val context: Context,
         private val worker: BackgroundWorker,
-        private val webViewRef: WeakReference<WebView> // 持有 WebView 弱引用以回傳結果
+        private val webViewRef: WeakReference<WebView>
+// private val repository: LedgerRepository,
 ) {
     // 定義 Bridge 的協程作用域 (使用 Main + Job)
     private val bridgeScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
@@ -70,34 +71,29 @@ class AndroidBridge(
         }
     }
 
-    /** 資料庫操作路由 (在此處對接 Repository) 注意：這裡應注入 Repository 實例，目前使用模擬數據 */
     private suspend fun handleDatabaseAction(action: String, payload: JSONObject): Any? {
-        // 模擬耗時操作
-        // delay(500)
-
         return when (action) {
-            "DB:queryExpenses" -> {
-                // TODO: 呼叫 Repository.getExpensesByDateRange(...)
-                // 這裡暫時回傳假資料
-                val mockArray = JSONArray()
-                mockArray.put(
-                        JSONObject().apply {
-                            put("id", 101)
-                            put("amount", -150.0)
-                            put("description", "Lunch (Mock DB Data)")
-                            put("timestamp", System.currentTimeMillis())
-                        }
-                )
-                mockArray
-            }
-            "DB:insertExpense" -> {
-                // TODO: 呼叫 Repository.insert(...)
-                val id = (System.currentTimeMillis() % 10000).toInt()
-                id // 回傳新 ID
+            "DB:getAllExpenses" -> {
+                true
             }
             else -> throw IllegalArgumentException("Unknown Database action: $action")
         }
     }
+    // private fun mapExpensesToJson(transactions: List<OrchestratedTransaction>): JSONArray {
+    //     val jsonArray = JSONArray()
+    //     transactions.forEach {
+    //         val expense = it.expense // Extract the core Expense object
+    //         jsonArray.put(
+    //                 JSONObject().apply {
+    //                     put("id", expense.id)
+    //                     put("amount", expense.amount)
+    //                     put("description", expense.description)
+    //                     put("timestamp", expense.timestamp)
+    //                 }
+    //         )
+    //     }
+    //     return jsonArray
+    // }
 
     /** 系統操作路由 */
     private suspend fun handleSystemAction(action: String, payload: JSONObject): Any? {
