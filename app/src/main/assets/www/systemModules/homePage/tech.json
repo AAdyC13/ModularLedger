@@ -65,10 +65,6 @@
 	"registerElements": [
 		{
 			"page": "systemPage.Home",
-<<<<<<< HEAD
-			"slot": "page-header",
-			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\" id=\"calendar-btn\">日曆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"list-btn\">清單</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能3</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"shop-btn\">模組商店</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"setting-btn\">設定</button></nav>",
-=======
 			"selector": "#menu-container-header",
 			"replacers": [
 				{
@@ -77,7 +73,6 @@
 					"changeID": "example_btn_on_HomePage"
 				}
 			],
->>>>>>> origin/前端設計
 			"handlers": [
 				{
 					"event": "click",
@@ -164,11 +159,5 @@
 			},
 			"component_dependencies": []
 		}
-<<<<<<< HEAD
-	],
-	"module_dependencies": []
-}
-=======
 	]
 }
->>>>>>> origin/前端設計
