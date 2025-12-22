@@ -6,6 +6,18 @@ import { parseModuleZip } from '@/lib/zip-handler';
 import { getModules, saveModuleRecord, getUploadPath } from '@/lib/storage';
 import { ApiResponse, ModuleRecord } from '@/types/module';
 
+// 定義 CORS Headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// 處理 Preflight (OPTIONS) 請求 - 這是修正 CORS 的關鍵
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 // GET: 獲取列表
 export async function GET() {
   const modules = getModules();
@@ -13,11 +25,7 @@ export async function GET() {
     success: true, 
     data: modules 
   }, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    }
+    headers: corsHeaders // 確保 GET 回應也包含 Header
   });
 }
 
@@ -28,7 +36,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
 
     if (!file || !file.name.endsWith('.zip')) {
-      return NextResponse.json({ success: false, message: '請上傳 .zip 格式的檔案' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: '請上傳 .zip 格式的檔案' }, 
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -42,9 +53,8 @@ export async function POST(request: NextRequest) {
     
     await writeFile(savePath, buffer);
 
-    // 獲取 Host (例如: localhost:3000 或 example.com)
+    // 獲取 Host
     const host = request.headers.get('host');
-    // 判斷協議 (若有反向代理如 Nginx 則讀取 x-forwarded-proto，否則預設 http)
     const protocol = request.headers.get('x-forwarded-proto') ?? 'http';
     const baseUrl = `${protocol}://${host}`;
     
@@ -63,10 +73,15 @@ export async function POST(request: NextRequest) {
       success: true, 
       data: newRecord,
       message: '模組上架成功'
+    }, { 
+      headers: corsHeaders 
     });
 
   } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ success: false, message: error.message || '伺服器內部錯誤' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || '伺服器內部錯誤' }, 
+      { status: 500, headers: corsHeaders }
+    );
   }
 }

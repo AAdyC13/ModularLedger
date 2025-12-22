@@ -1,3 +1,5 @@
+import { Calculator } from '../../components/Calculator/Calculator.js';
+
 export default class Recorder {
     constructor() {
         this.Agent = null;
@@ -8,6 +10,7 @@ export default class Recorder {
         this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
 
         this.recordForm = null;
+        this.calculator = null; // 新增：儲存計算機實例
 
         // 定義各模式的欄位配置
         this.formConfigs = {
@@ -54,15 +57,41 @@ export default class Recorder {
         this.Agent = Agent;
         this.logger = Agent.tools.logger;
         this.eventPlatform = Agent.eventPlatform;
-        this.recordMain = Agent.myDOM.querySelector("#record-main");
+        
+        // 修正：增加 fallback，若 Agent.myDOM 為空則嘗試從 document 查找
+        this.recordMain = (Agent.myDOM || document).querySelector("#record-main");
+        
         if (!this.recordMain) {
             this.logger.error('Recorder container not found!');
             return false;
         }
+
+        // 新增：初始化計算機
+        await this.setupCalculator();
+
         this.bindEvents(); // 綁定事件
         await this.loadSubInterface(0); // 載入默認子介面（支出）
         this.logger.debug(`Recorder initialized`);
         return true;
+    }
+
+    /**
+     * 新增：設定並載入計算機組件
+     */
+    async setupCalculator() {
+        try {
+            // 載入計算機 HTML 模板 (路徑相對於 index.html)
+            const response = await fetch('components/Calculator/Calculator.html');
+            if (!response.ok) throw new Error('Failed to fetch Calculator.html');
+            const html = await response.text();
+            
+            // 實例化計算機並注入模板
+            this.calculator = new Calculator(html);
+            this.calculator.injectTemplate();
+            this.logger.debug('Calculator setup complete');
+        } catch (e) {
+            this.logger.error('Failed to load calculator: ' + e.message);
+        }
     }
 
     /**
@@ -72,7 +101,8 @@ export default class Recorder {
         // 返回按鈕
         const backBtn = this.recordMain.querySelector("#back-btn");
         if (backBtn) {
-            this.addEventListener(backBtn, 'click', (e) => {
+            // 注意：使用 Agent.interface 時可能需要用 this.addEventListener 包裝，但這裡直接用原生即可
+            backBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 // this.navigate('pages/home.html');
             });
@@ -81,7 +111,7 @@ export default class Recorder {
         // 儲存按鈕
         const saveBtn = this.recordMain.querySelector("#save-btn");
         if (saveBtn) {
-            this.addEventListener(saveBtn, 'click', (e) => {
+            saveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.saveRecord();
             });
@@ -90,7 +120,7 @@ export default class Recorder {
         // 再記一筆按鈕
         const addAnotherBtn = this.recordMain.querySelector("#add-another-btn");
         if (addAnotherBtn) {
-            this.addEventListener(addAnotherBtn, 'click', (e) => {
+            addAnotherBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.addAnotherRecord();
             });
@@ -99,7 +129,7 @@ export default class Recorder {
         // 記錄類型按鈕
         const typeBtns = this.recordMain.querySelectorAll('.record-type-btn');
         typeBtns.forEach(btn => {
-            this.addEventListener(btn, 'click', async (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const newType = parseInt(btn.dataset.type);
                 if (newType !== this.recordType) {
@@ -114,7 +144,7 @@ export default class Recorder {
         // 暫存按鈕
         const tempSaveBtn = this.recordMain.querySelector('#temp-save-btn');
         if (tempSaveBtn) {
-            this.addEventListener(tempSaveBtn, 'click', (e) => {
+            tempSaveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.tempSaveRecord();
             });
@@ -148,8 +178,6 @@ export default class Recorder {
 
         // 保存舊的表單元素
         const oldForm = this.recordForm;
-
-
 
         // 重置 ID 映射
         this.fieldIdMap = {};
@@ -215,8 +243,6 @@ export default class Recorder {
         // 重新獲取 DOM 引用
         this.recordForm = newFormContainer.querySelector('.record-form');
 
-
-
         // 初始化計算機（金額欄位）
         await this.initCalculator();
     }
@@ -281,12 +307,14 @@ export default class Recorder {
     }
 
     /**
-     * 初始化計算機
+     * 初始化計算機 (修正版)
      */
     async initCalculator() {
         try {
-            const calculator = this.getComponent('calculator');
-            if (!calculator) return;
+            if (!this.calculator) {
+                this.logger.warn('Calculator not ready yet');
+                return;
+            }
 
             // 找到當前表單中類型為 calculator 的欄位
             const fields = this.formConfigs[this.recordType] || this.formConfigs[0];
@@ -296,7 +324,7 @@ export default class Recorder {
                 // 從 fieldIdMap 中查找對應的 ID
                 const fieldId = this.fieldIdMap[calculatorField.name];
                 if (fieldId) {
-                    await calculator.init(fieldId);
+                    await this.calculator.init(fieldId);
                     console.log(`✓ Calculator initialized for ${calculatorField.name} (${fieldId})`);
                 }
             }
@@ -304,8 +332,6 @@ export default class Recorder {
             console.error('初始化計算機失敗:', error);
         }
     }
-
-
 
     /**
      * 儲存記錄
@@ -315,7 +341,7 @@ export default class Recorder {
         // TODO: 實作儲存邏輯
 
         // 儲存後返回首頁
-        this.navigate('pages/home.html');
+        // this.navigate('pages/home.html');
     }
 
     /**

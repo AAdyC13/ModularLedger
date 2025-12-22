@@ -8,6 +8,7 @@ import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewAssetLoader.InternalStoragePathHandler
+import android.webkit.WebSettings
 import com.example.modular_ledger.data.AppDatabase
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -45,6 +46,7 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false
         settings.allowContentAccess = false
         settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
 
         // 設定 AssetLoader：加入使用者模組路徑映射
         // 目標路徑：/data/user/0/.../files/www/userModules

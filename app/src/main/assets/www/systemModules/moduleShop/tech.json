@@ -4,10 +4,14 @@
 	"components": [
 		{
 			"name": "Main",
-			"type": "Page",
+			"type": "Panel",
 			"entry": "ShopPage.js",
 			"html_template": "ShopPage.html",
 			"css_template": "ShopPage.css",
+			"panel_location": {
+				"pageID": "system.ModuleShop.Main",
+				"slot": "page-content"
+			},
 			"component_dependencies": []
 		}
 	],
