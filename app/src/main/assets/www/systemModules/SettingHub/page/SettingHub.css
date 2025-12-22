@@ -1,32 +1,105 @@
+/* 設定頁面主容器 */
 .setting-main {
-	display: flex;
-	flex-direction: column;
-	justify-content: flex-start;
-	align-items: stretch;
-	height: 100%;
-	width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto; /* 確保內容可滾動 */
+    padding: 10px;    /* 增加一點邊距 */
+    box-sizing: border-box;
 
-	/* ===== Calendar Variables ===== */
-	/* --setting-option-btn-bg: var(--c8); */
-	--setting-option-btn-color: var(--c3);
-	--setting-option-btn-border-color: var(--c3);
+    /* ===== Calendar Variables (使用您提供的變數) ===== */
+    /* 若 var(--c3) 未定義，提供一個預設橘紅色 fallback */
+    --setting-option-btn-color: var(--c3, #ff5722);
+    --setting-option-btn-border-color: var(--c3, #ff5722);
+    --setting-option-btn-bg: var(--c8, #ffffff);
 }
+
+/* 按鈕樣式 (完全依照您提供的代碼) */
 button.setting-option-btn {
-	flex: 0 1 50px;
-	display: flex;
-	padding: 12px 16px;
-	margin: 8px 0;
-	font-size: 16px;
-	text-align: left;
-	color: var(--setting-option-btn-color);
-	background-color: var(--setting-option-btn-bg);
-	font-weight: 100;
-	border-top: 1px solid var(--setting-option-btn-border-color);
-	border-left: 1px solid var(--setting-option-btn-border-color);
-	border-bottom: 3px solid var(--setting-option-btn-border-color);
-	border-right: 3px solid var(--setting-option-btn-border-color);
-	border-radius: 6px;
+    flex: 0 0 auto; /* 修改為 auto 避免被壓縮，原為 0 1 50px */
+    min-height: 50px;
+    display: flex;
+    align-items: center; /* 垂直置中文字 */
+    padding: 12px 16px;
+    margin: 8px 0;
+    font-size: 16px;
+    text-align: left;
+    color: var(--setting-option-btn-color);
+    background-color: var(--setting-option-btn-bg);
+    font-weight: 500; /* 修改為 500 讓文字更清晰 */
+    
+    /* 特殊邊框設計 */
+    border: none; /* 重置預設 */
+    border-top: 1px solid var(--setting-option-btn-border-color);
+    border-left: 1px solid var(--setting-option-btn-border-color);
+    border-bottom: 3px solid var(--setting-option-btn-border-color);
+    border-right: 3px solid var(--setting-option-btn-border-color);
+    border-radius: 6px;
+    
+    transition: transform 0.1s;
+    cursor: pointer;
 }
+
 button.setting-option-btn:active {
-	transform: scale(0.96);
+    transform: scale(0.96);
 }
+
+/* 模組列表項目的特殊樣式 (繼承 button 但微調) */
+div.setting-option-btn.module-item {
+    cursor: default;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+div.setting-option-btn.module-item:active {
+    transform: none; /* 取消模組項目的點擊縮放 */
+}
+
+/* 開關樣式 (Toggle Switch) - 這是模組功能必須的 */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.switch input { opacity: 0; width: 0; height: 0; }
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px; width: 18px;
+    left: 3px; bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: var(--setting-option-btn-color); /* 跟隨按鈕顏色 */
+}
+
+input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* 載入與錯誤訊息 */
+.loading, .error, .empty {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+}
+.error { color: #d9534f; }

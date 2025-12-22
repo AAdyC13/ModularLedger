@@ -21,17 +21,15 @@ export class ModulesManager {
         this.eventAgent.on('CM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('EM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('PM:analysis_complete', this.handleAnalysisComplete.bind(this));
-        this.logger.debugA('Initializing ModulesManager...');
+        
         try {
             const schema = await this.bridge.getSchema('module-info.schema');
             const techSchema = await this.bridge.getSchema('module-tech.schema');
-            this.logger.debugA('Initializing ModulesManager...');
-            // this.logger.debug(`Module schema loaded: ${typeof schema}, content: ${JSON.stringify(schema)}`);
+            
             if (!schema || !techSchema) {
                 throw new Error('Failed to load module schema from Android');
             }
             Module.init(logger_forModule, schema, techSchema);
-            this.logger.debugA('Initializing ModulesManager...');
         } catch (error) {
             this.logger.error('Failed to load Module schema: ' + error.message);
             this.schemaLoadFailed = true;
@@ -44,6 +42,7 @@ export class ModulesManager {
             .join('\n');
         this.logger.debug(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
     }
+
     handleAnalysisComplete(data) {
         const modID = data.modID;
         const sys = data.sysName;
@@ -70,7 +69,6 @@ export class ModulesManager {
                 this.logger.warn(`Unknown system name in analysis complete: ${sys}`);
                 return;
         }
-        //this.logger.debug(`Module analysis complete: ${modID} from system: ${sys}`);
     }
 
     /**
@@ -127,26 +125,44 @@ export class ModulesManager {
 
     async enableSystemModules() {
         const modIds = new Set(this.getPrefixedIds('systemModule'));
-        this.logger.debug(`System module IDs to enable: ${Array.from(modIds).join(', ')}`);
+        this.logger.debug(`System module IDs found: ${Array.from(modIds).join(', ')}`);
         await this.enableModules(modIds);
     }
 
     /**
-     * 啟用模組
+     * 啟用模組 (包含啟用狀態過濾邏輯)
      * @param {Set} modIds - 要啟動的 Idset
      */
     async enableModules(modIds) {
-        const totalMods = modIds.size;
-        this.logger.info(`Enabling ${JSON.stringify(Array.from(modIds))} modules...`);
-        const ans = this.monitorModuleLoading.bind(this)(modIds);
-        try {
-            const mods = this.modFindByIds(modIds)
-            const filenNames = mods.map(m => m.folderName);
-            const techs = await this.bridge.getTechs(filenNames);
-            mods.forEach((mod) => {
+        // [新增] 過濾未啟用的模組
+        const enabledModIds = new Set();
+        for (const id of modIds) {
+            const mod = this.moduleDict[id];
+            if (mod && mod.status.enabled) {
+                enabledModIds.add(id);
+            } else {
+                this.logger.debug(`Skipping disabled module: ${id}`);
+            }
+        }
 
+        const totalMods = enabledModIds.size;
+        this.logger.info(`Enabling ${totalMods} modules (filtered from ${modIds.size})...`);
+        
+        // 僅監控已啟用的模組
+        const ans = this.monitorModuleLoading.bind(this)(enabledModIds);
+        
+        try {
+            const mods = this.modFindByIds(enabledModIds);
+            const filenNames = mods.map(m => m.folderName);
+            
+            // 透過 Bridge 獲取 Tech，Android 端應也會過濾停用的模組
+            const techs = await this.bridge.getTechs(filenNames);
+            
+            mods.forEach((mod) => {
                 const techData = techs[mod.folderName];
-                if (techData) {
+                
+                // 檢查是否有有效的 Tech 資料
+                if (techData && Object.keys(techData).length > 0) {
                     let res = null;
                     try {
                         res = mod.loadTech(techData)
@@ -157,7 +173,6 @@ export class ModulesManager {
                         // 啟用邏輯在此添加
                         for (const techName in mod.tech) {
                             const emitName = `MM:Module_enabled:${techName}`;
-                            // this.logger.debug(`Emitting event ${emitName} for module: ${mod.id}`);
                             this.eventAgent.emit(emitName, {
                                 id: mod.id,
                                 tech: mod.tech[techName],
@@ -170,24 +185,25 @@ export class ModulesManager {
                         this.logger.error(`Module ${mod.id} tech loading failed, skipping enable`);
                     }
                 } else {
-                    this.logger.warn(`No tech.json found for module: ${mod.id}`);
+                    this.logger.warn(`No tech.json found or empty for module: ${mod.id} (Check if disabled on native side)`);
                 }
             });
         } catch (error) {
             this.logger.error(`Error enabling module: ` + error);
         }
+        
         const unable = await ans;
         if (unable.size > 0) {
-
             // 警告! 超時，這裡應該要阻止部分模組的啟動過程
-
             this.logger.warn(`Some modules failed to enable within timeout: ${Array.from(unable).join(', ')}`);
         }
+        
         const num = totalMods - unable.size;
         const word = num === 1 || num === 0 ? 'module' : 'modules';
-        this.eventAgent.emit('MM:Module_fully_enabled', { id: null }); // 暫時，強制 reset all pages
+        this.eventAgent.emit('MM:Module_fully_enabled', { id: null });
         this.logger.info(`Successfully enabled ${num} ${word}.`);
     }
+
     /**
      * 監視模組啟動狀態
      * @param {Set} modIds - 要啟動的 Idset
@@ -272,7 +288,6 @@ class Module {
         Module.logger = logger
         Module.schema = schema;
         Module.techSchema = techSchema;
-
     }
 
     constructor(data, skipValidation = false) {
@@ -298,26 +313,31 @@ class Module {
         }
         this.permissions = null;
         this.tech = {};
+        
+        // [新增] 狀態管理，包含啟用狀態
         this.status = {
-            enabled: false,
+            enabled: data.isEnabled !== false, // 預設為 true，若資料庫傳回 false 則停用
             techLoaded: false,
             EM_check: true,
             CM_check: true,
-            PMe_check: true, // PageManager's element check
-            PMc_check: true,// PageManager's creating check
+            PMe_check: true,
+            PMc_check: true,
             MD_check: true
         }
 
         // 標記是否為白名單模組(未經驗證)
         this.isWhitelisted = skipValidation;
-
     }
+    
     checkeLoadingStatus() {
+        // [新增] 若模組被停用，不應卡住 Loading 流程，直接回傳 true
+        if (!this.status.enabled) return true;
+        
         return this.status.EM_check && this.status.CM_check && this.status.PMc_check && this.status.PMe_check;
     }
+    
     loadTech(data) {
         if (!Module.techSchema) {
-            // throw new Error('Tech schema not available');
             Module.logger.error('Tech schema not available');
             return false;
         }
@@ -328,7 +348,6 @@ class Module {
                 // 警告! 目前跳過驗證，這個函數有大問題
                 //this.validate_tech(data);
             } catch (error) {
-                // throw new Error('Tech validation failed: ' + error);
                 Module.logger.error(`Tech validation failed for module ${this.id}: ` + error);
                 return false;
             }
@@ -345,7 +364,6 @@ class Module {
             if (this.permissions.has('registerElements')) {
                 this.tech["registerElements"] = data.registerElements || [];
                 this.status.EM_check = false;
-                // this.status.PMe_check = false;
             }
             if (this.permissions.has('registerComponents')) {
                 this.tech["registerComponents"] = data.registerComponents || [];
@@ -360,14 +378,13 @@ class Module {
         Module.logger.debug(`Tech loaded for module: ${this.id}`);
         return true;
     }
+    
     unloadTech() {
         this.permissions = null;
         this.tech = null;
         this.status.techLoaded = false;
         Module.logger.debug(`Tech unloaded for module: ${this.id}`);
     }
-
-    // 警告! 目前寫法下，以下驗證函數放在 Module 實例中沒意義。
 
     /**
      * 根據 Schema info驗證模組資料
@@ -424,22 +441,6 @@ class Module {
     validate_tech(techData) {
         const data = this;
         let techSchemaObj = Module.techSchema;
-        // try {
-        //     if (typeof techSchemaObj === 'string') {
-        //         techSchemaObj = JSON.parse(techSchemaObj);
-        //     }
-        //     if (techSchemaObj && techSchemaObj.type && techSchemaObj.content) {
-        //         // encoded by AndroidBridge: { type: 'Object', content: {...} }
-        //         techSchemaObj = techSchemaObj.content;
-        //     }
-        // } catch (e) {
-        //     throw new Error('Failed to parse tech schema: ' + e.message);
-        // }
-
-        // if (!techSchemaObj || !techSchemaObj.properties) {
-        //     Module.logger && Module.logger.warn && Module.logger.warn('Tech schema missing properties, skipping tech validation');
-        //     return;
-        // }
 
         // 1) permissions
         if (techSchemaObj.properties.permissions) {
@@ -527,13 +528,13 @@ class Module {
         // all good: attach tech and mark
         this.tech = techData;
         this.status.techLoaded = true;
-        // Module.logger.debug(`Tech validation passed for ${this.id}`);
     }
 
     /**
      * 取得模組資訊摘要
      */
     getSummary() {
-        return `${this.name} (${this.id}) v${this.info.version} by ${this.info.author}`;
+        // [新增] 摘要資訊顯示啟用狀態
+        return `${this.name} (${this.id}) v${this.info.version} [${this.status.enabled ? 'Enabled' : 'Disabled'}]`;
     }
 }
