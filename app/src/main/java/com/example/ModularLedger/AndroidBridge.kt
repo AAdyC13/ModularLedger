@@ -21,30 +21,19 @@ import java.net.URL
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-/**
- * 結合了 Main 分支的異步匯流排架構與 Store 分支的模組管理功能。
- */
 class AndroidBridge(
     private val context: Context,
     private val worker: BackgroundWorker,
     private val webViewRef: WeakReference<WebView>,
-    private val database: AppDatabase // 新增：資料庫依賴
+    private val database: AppDatabase
 ) {
-    // 定義 Bridge 的協程作用域 (使用 Main + Job)
     private val bridgeScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-
-    // 定義 IO 作用域供繁重任務使用
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
-    /** 清理資源 (建議在 Activity onDestroy 時調用) */
     fun destroy() {
         bridgeScope.cancel()
         ioScope.cancel()
     }
-
-    // ============================================================================================
-    //  Core: Asynchronous Task Bus (異步任務匯流排 - Main 分支核心)
-    // ============================================================================================
 
     @JavascriptInterface
     fun postMessage(jsonString: String) {
@@ -62,7 +51,6 @@ class AndroidBridge(
                     action == "TEST:ping" -> "pong"
                     else -> throw IllegalArgumentException("Unknown action: $action")
                 }
-
                 sendResponse(taskId, "SUCCESS", resultData)
             } catch (e: Exception) {
                 Log.e("AndroidBridge", "Task failed: $jsonString", e)
@@ -71,55 +59,25 @@ class AndroidBridge(
         }
     }
 
-    // ============================================================================================
-    //  Store Features: Direct Methods (相容 Store 前端)
-    // ============================================================================================
-
-    /**
-     * 下載並安裝模組 (來自 Store 分支)
-     * 包含 Zip Slip 防護、DAO 寫入
-     */
+    // --- 相容舊版介面 (若有需要) ---
     @JavascriptInterface
     fun installModule(downloadUrl: String): String {
         return try {
-            // 在背景執行緒執行網路與 IO 操作，這裡使用 runBlocking 因為此介面定義為同步回傳 String
-            // 建議前端改用 postMessage(SYS:installModule)，但為了相容性保留此方法
-            val success = runBlocking(Dispatchers.IO) {
-                performInstall(downloadUrl)
-            }
-
+            val success = runBlocking(Dispatchers.IO) { performInstall(downloadUrl) }
             if (success) {
-                // 安裝成功後，立即更新快取
-                runBlocking(Dispatchers.IO) {
-                    worker.reloadModules(database.moduleDao())
-                }
+                runBlocking(Dispatchers.IO) { worker.reloadModules(database.moduleDao()) }
                 encodeResponse(mapOf("success" to true, "message" to "安裝成功"))
             } else {
-                encodeResponse(mapOf("success" to false, "message" to "安裝過程發生未知錯誤"))
+                encodeResponse(mapOf("success" to false, "message" to "安裝失敗"))
             }
         } catch (e: Exception) {
-            Log.e("AndroidBridge", "Install Error", e)
             encodeResponse(mapOf("success" to false, "message" to (e.message ?: "Unknown Error")))
         }
     }
 
-    @JavascriptInterface
-    fun getSystemModulesList(): String {
-        // 確保列表是最新的 (同步等待)
-        runBlocking(Dispatchers.IO) {
-            worker.reloadModules(database.moduleDao())
-        }
-        return encodeResponse(worker.systemModulesList)
-    }
-
-    // ============================================================================================
-    //  Action Handlers
-    // ============================================================================================
-
     private suspend fun handleDatabaseAction(action: String, payload: JSONObject): Any? {
         return when (action) {
-            "DB:getAllExpenses" -> true
-            // 可在此擴充更多 DB 操作
+            "DB:getAllExpenses" -> true 
             else -> throw IllegalArgumentException("Unknown Database action: $action")
         }
     }
@@ -132,19 +90,28 @@ class AndroidBridge(
                 for (i in 0 until fileNames.length()) {
                     names.add(fileNames.optString(i))
                 }
+                // 讀取 Tech 設定 (會過濾掉未啟用的模組)
                 loadTechs(names)
             }
             "SYS:getSystemModulesList" -> {
+                // 重新讀取並回傳完整列表 (含啟用狀態)
                 worker.reloadModules(database.moduleDao())
                 JSONArray(worker.systemModulesList)
             }
             "SYS:installModule" -> {
-                // 支援透過 postMessage 呼叫安裝
                 val url = payload.optString("url")
                 if (url.isEmpty()) throw IllegalArgumentException("URL is required")
                 val success = performInstall(url)
                 if (success) worker.reloadModules(database.moduleDao())
                 success
+            }
+            "SYS:toggleModule" -> {
+                // 新增：切換模組狀態
+                val id = payload.optString("id")
+                val enable = payload.optBoolean("enable")
+                database.moduleDao().updateModuleStatus(id, enable)
+                worker.reloadModules(database.moduleDao())
+                true
             }
             "SYS:getSchema" -> {
                 val name = payload.optString("name")
@@ -166,107 +133,21 @@ class AndroidBridge(
         }
     }
 
-    // ============================================================================================
-    //  Installation Logic (移植自 Store 分支 Interface.kt)
-    // ============================================================================================
-
-    private fun performInstall(urlString: String): Boolean {
-        val url = URL(urlString)
-        val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connectTimeout = 15000
-        connection.readTimeout = 15000
-
-        if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-            throw Exception("Server connection failed: ${connection.responseCode}")
-        }
-
-        val tempFile = File(context.cacheDir, "temp_module_${System.currentTimeMillis()}.zip")
-        try {
-            connection.inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
-
-            val tempExtractDir = File(context.cacheDir, "extract_${System.currentTimeMillis()}")
-            tempExtractDir.mkdirs()
-
-            try {
-                unzipSecurely(tempFile, tempExtractDir)
-
-                val infoFile = File(tempExtractDir, "info.json")
-                if (!infoFile.exists()) throw Exception("Invalid Module: info.json not found")
-
-                val jsonString = infoFile.readText()
-                val jsonObject = JSONObject(jsonString)
-                val modId = jsonObject.optString("id")
-
-                if (modId.isEmpty()) throw Exception("Invalid Module: ID is missing")
-
-                val userModulesDir = File(context.filesDir, "www/userModules")
-                if (!userModulesDir.exists()) userModulesDir.mkdirs()
-
-                val targetDir = File(userModulesDir, modId)
-                if (targetDir.exists()) targetDir.deleteRecursively()
-
-                if (!tempExtractDir.renameTo(targetDir)) {
-                    tempExtractDir.copyRecursively(targetDir, overwrite = true)
-                }
-
-                // 寫入 DAO
-                val entity = ModuleEntity(
-                    id = modId,
-                    name = jsonObject.optString("name", "Unknown"),
-                    version = jsonObject.optString("version", "1.0.0"),
-                    author = jsonObject.optString("author", "Unknown"),
-                    description = jsonObject.optString("description", ""),
-                    folderName = modId,
-                    sourceType = "user"
-                )
-                database.moduleDao().insertModule(entity)
-
-                return true
-
-            } finally {
-                if (tempExtractDir.exists()) tempExtractDir.deleteRecursively()
-            }
-        } finally {
-            if (tempFile.exists()) tempFile.delete()
-        }
-    }
-
-    private fun unzipSecurely(zipFile: File, targetDir: File) {
-        val canonicalTarget = targetDir.canonicalPath
-        ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zis ->
-            var entry: ZipEntry?
-            while (zis.nextEntry.also { entry = it } != null) {
-                val newFile = File(targetDir, entry!!.name)
-                val canonicalDest = newFile.canonicalPath
-
-                if (!canonicalDest.startsWith(canonicalTarget + File.separator)) {
-                    throw SecurityException("Security Violation: Zip Slip attack detected!")
-                }
-
-                if (entry!!.isDirectory) {
-                    newFile.mkdirs()
-                } else {
-                    newFile.parentFile?.mkdirs()
-                    FileOutputStream(newFile).use { fos -> zis.copyTo(fos) }
-                }
-            }
-        }
-    }
-
-    /** 讀取 Tech 設定 (支援系統與使用者模組) */
     private fun loadTechs(names: List<String>): JSONObject {
         val techsMap = mutableMapOf<String, JSONObject>()
-        // 建立 ID -> ModuleInfo 映射
         val moduleMap = worker.systemModulesList.associateBy { it["folderName"] as? String ?: "" }
 
         for (name in names) {
             try {
                 val modInfo = moduleMap[name]
+                // 關鍵：檢查是否啟用
+                val isEnabled = modInfo?.get("isEnabled") as? Boolean ?: true
+                
+                if (!isEnabled) {
+                    techsMap[name] = JSONObject() // 回傳空物件，前端就不會載入此模組
+                    continue
+                }
+
                 val sourceType = modInfo?.get("sourceType") as? String ?: "system"
                 var content = ""
 
@@ -279,7 +160,7 @@ class AndroidBridge(
                         val inputStream = context.assets.open(techPath)
                         content = inputStream.bufferedReader().use { it.readText() }
                     } catch (e: java.io.FileNotFoundException) {
-                        Log.d("AndroidBridge", "Tech not found in assets: $name")
+                        Log.d("AndroidBridge", "Tech not found: $name")
                     }
                 }
 
@@ -296,9 +177,85 @@ class AndroidBridge(
         return JSONObject(techsMap as Map<*, *>)
     }
 
-    // ============================================================================================
-    //  Helpers
-    // ============================================================================================
+    private fun performInstall(urlString: String): Boolean {
+        val url = URL(urlString)
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.connectTimeout = 15000
+        connection.readTimeout = 15000
+
+        if (connection.responseCode != HttpURLConnection.HTTP_OK) throw Exception("Server error: ${connection.responseCode}")
+
+        val tempFile = File(context.cacheDir, "temp_mod_${System.currentTimeMillis()}.zip")
+        try {
+            connection.inputStream.use { input ->
+                FileOutputStream(tempFile).use { output -> input.copyTo(output) }
+            }
+
+            val tempExtractDir = File(context.cacheDir, "extract_${System.currentTimeMillis()}")
+            tempExtractDir.mkdirs()
+
+            try {
+                unzipSecurely(tempFile, tempExtractDir)
+                val infoFile = File(tempExtractDir, "info.json")
+                if (!infoFile.exists()) throw Exception("info.json not found")
+
+                val jsonObject = JSONObject(infoFile.readText())
+                val modId = jsonObject.optString("id")
+                if (modId.isEmpty()) throw Exception("Invalid Module ID")
+
+                val userModulesDir = File(context.filesDir, "www/userModules")
+                if (!userModulesDir.exists()) userModulesDir.mkdirs()
+
+                val targetDir = File(userModulesDir, modId)
+                if (targetDir.exists()) targetDir.deleteRecursively()
+
+                if (!tempExtractDir.renameTo(targetDir)) {
+                    tempExtractDir.copyRecursively(targetDir, overwrite = true)
+                }
+
+                // 寫入資料庫 (預設啟用)
+                val entity = ModuleEntity(
+                    id = modId,
+                    name = jsonObject.optString("name", "Unknown"),
+                    version = jsonObject.optString("version", "1.0.0"),
+                    author = jsonObject.optString("author", "Unknown"),
+                    description = jsonObject.optString("description", ""),
+                    folderName = modId,
+                    sourceType = "user",
+                    isEnabled = true 
+                )
+                database.moduleDao().insertModule(entity)
+                return true
+            } finally {
+                if (tempExtractDir.exists()) tempExtractDir.deleteRecursively()
+            }
+        } catch (e: Exception) {
+            Log.e("AndroidBridge", "Install Error", e)
+            return false
+        } finally {
+            if (tempFile.exists()) tempFile.delete()
+        }
+    }
+
+    private fun unzipSecurely(zipFile: File, targetDir: File) {
+        val canonicalTarget = targetDir.canonicalPath
+        ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zis ->
+            var entry: ZipEntry?
+            while (zis.nextEntry.also { entry = it } != null) {
+                val newFile = File(targetDir, entry!!.name)
+                if (!newFile.canonicalPath.startsWith(canonicalTarget + File.separator)) {
+                    throw SecurityException("Zip Slip violation")
+                }
+                if (entry!!.isDirectory) {
+                    newFile.mkdirs()
+                } else {
+                    newFile.parentFile?.mkdirs()
+                    FileOutputStream(newFile).use { fos -> zis.copyTo(fos) }
+                }
+            }
+        }
+    }
 
     private fun sendResponse(taskId: String, status: String, data: Any?, errorMessage: String? = null) {
         bridgeScope.launch {
@@ -307,106 +264,47 @@ class AndroidBridge(
                     put("taskId", taskId)
                     put("status", status)
                     if (data != null) put("data", data)
-                    if (errorMessage != null) {
-                        put("error", JSONObject().apply {
-                            put("code", 500)
-                            put("message", errorMessage)
-                        })
-                    }
+                    if (errorMessage != null) put("error", JSONObject().put("message", errorMessage))
                 }
                 val script = "if(window.BridgeMessenger) window.BridgeMessenger.onNativeMessage(${response.toString()})"
                 webViewRef.get()?.evaluateJavascript(script, null)
-            } catch (e: Exception) {
-                Log.e("AndroidBridge", "Failed to send response", e)
-            }
+            } catch (e: Exception) { Log.e("AndroidBridge", "Send response failed", e) }
         }
     }
 
     private fun encodeResponse(content: Any): String {
-        val (type, jsonContent) = when (content) {
-            is JSONObject -> "Object" to content
-            is JSONArray -> "Array" to content
-            is List<*> -> "Array" to JSONArray(content)
-            is Map<*, *> -> "Object" to JSONObject(content)
-            else -> throw IllegalArgumentException("Unsupported type")
-        }
-        return JSONObject().apply {
-            put("type", type)
-            put("content", jsonContent)
-        }.toString()
+        return JSONObject().put("content", content).toString()
     }
 
-    private fun syncThemeColor(color: String) {
-        (context as? MainActivity)?.runOnUiThread { context.updateThemeColor(color) }
-    }
-
-    private fun getAppVersion(): String {
-        return try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "unknown"
-        } catch (e: Exception) { "unknown" }
-    }
-
+    // 輔助方法保持與之前相同
+    private fun getAppVersion() = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" } catch (e: Exception) { "" }
     private fun checkNetworkStatus(): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val network = cm.activeNetwork ?: return false
-        val caps = cm.getNetworkCapabilities(network) ?: return false
-        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        return cm.activeNetwork?.let { cm.getNetworkCapabilities(it)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) } ?: false
     }
-
-    private fun openSettings() {
-        try {
-            val intent = Intent(android.provider.Settings.ACTION_SETTINGS).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(context, "無法打開設置", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun share(text: String, title: String) {
-        try {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_TITLE, title)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(Intent.createChooser(shareIntent, title))
-        } catch (e: Exception) {
-            Toast.makeText(context, "分享失敗", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun requestPermission(permission: String): Boolean {
-        val result = androidx.core.content.ContextCompat.checkSelfPermission(context, permission)
-        return result == android.content.pm.PackageManager.PERMISSION_GRANTED
-    }
+    private fun requestPermission(p: String) = androidx.core.content.ContextCompat.checkSelfPermission(context, p) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    private fun syncThemeColor(c: String) { (context as? MainActivity)?.runOnUiThread { context.updateThemeColor(c) } }
+    private fun openSettings() { context.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    private fun share(text: String, title: String) { context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="text/plain"; putExtra(Intent.EXTRA_TEXT, text); putExtra(Intent.EXTRA_TITLE, title) }, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
-/**
- * BackgroundWorker - 整合版
- * 負責載入與管理系統內建模組 (Assets) 與使用者安裝模組 (DB)。
- */
 class BackgroundWorker(private val context: Context) {
-    // 改為可變列表，初始為空，等待 reloadModules 填充
     var systemModulesList: List<Map<String, Any>> = ArrayList()
     val schemas: Map<String, JSONObject> = loadSchemas()
 
-    /**
-     * 重新載入模組 (合併 System Assets 與 User DB)
-     * 此方法應在 IO 線程呼叫
-     */
     fun reloadModules(moduleDao: ModuleDao) {
         val modules = mutableListOf<Map<String, Any>>()
+        
+        // 載入系統模組 (預設啟用)
+        loadAssetsModules().forEach { 
+            val m = it.toMutableMap()
+            m["isEnabled"] = true
+            modules.add(m)
+        }
 
-        // 1. 載入內建 System Modules (Assets)
-        modules.addAll(loadAssetsModules())
-
-        // 2. 載入使用者模組 (從資料庫)
+        // 載入使用者模組 (從 DB 讀取狀態)
         try {
-            val userModules = moduleDao.getAllModulesSync() // 假設 DAO 有這個同步方法
-            userModules.forEach { entity ->
+            moduleDao.getAllModulesSync().forEach { entity ->
                 modules.add(mapOf(
                     "id" to entity.id,
                     "name" to entity.name,
@@ -414,61 +312,44 @@ class BackgroundWorker(private val context: Context) {
                     "author" to entity.author,
                     "description" to entity.description,
                     "folderName" to entity.folderName,
-                    "sourceType" to "user" // 重要：標記為使用者模組
+                    "sourceType" to "user",
+                    "isEnabled" to entity.isEnabled
                 ))
             }
         } catch (e: Exception) {
-            Log.e("BackgroundWorker", "Failed to load modules from DB", e)
+            Log.e("BackgroundWorker", "DB Load Error", e)
         }
         systemModulesList = modules
     }
 
     private fun loadAssetsModules(): List<Map<String, Any>> {
         val list = mutableListOf<Map<String, Any>>()
-        val path = "www/systemModules"
         try {
-            val assetManager = context.assets
-            val folderNames = assetManager.list(path)
-
-            folderNames?.forEach { folderName ->
+            context.assets.list("www/systemModules")?.forEach { folder ->
                 try {
-                    // 檢查是否有 info.json
-                    val stream = assetManager.open("$path/$folderName/info.json")
-                    val jsonString = stream.bufferedReader().use { it.readText() }
-                    val jsonObject = JSONObject(jsonString)
+                    val content = context.assets.open("www/systemModules/$folder/info.json").bufferedReader().use { it.readText() }
+                    val json = JSONObject(content)
                     val map = mutableMapOf<String, Any>()
-                    jsonObject.keys().forEach { key ->
-                        map[key] = jsonObject.get(key)
-                    }
-                    map["folderName"] = folderName
-                    map["sourceType"] = "system" // 重要：標記為系統模組
+                    json.keys().forEach { map[it] = json.get(it) }
+                    map["folderName"] = folder
+                    map["sourceType"] = "system"
                     list.add(map)
-                } catch (e: Exception) {
-                    // 忽略非模組資料夾
-                }
+                } catch (e: Exception) {}
             }
-        } catch (e: Exception) {
-            Log.e("BackgroundWorker", "Error loading assets modules", e)
-        }
+        } catch (e: Exception) {}
         return list
     }
 
     private fun loadSchemas(): Map<String, JSONObject> {
-        val schemasPath = "schemas"
-        val schemasMap = mutableMapOf<String, JSONObject>()
+        val map = mutableMapOf<String, JSONObject>()
         try {
-            val assetManager = context.assets
-            val schemaFiles = assetManager.list(schemasPath)
-            schemaFiles?.forEach { fileName ->
-                if (fileName.endsWith(".json")) {
-                    val schemaName = fileName.removeSuffix(".json")
-                    val content = assetManager.open("$schemasPath/$fileName").bufferedReader().use { it.readText() }
-                    schemasMap[schemaName] = JSONObject(content)
+            context.assets.list("schemas")?.forEach { file ->
+                if (file.endsWith(".json")) {
+                    val content = context.assets.open("schemas/$file").bufferedReader().use { it.readText() }
+                    map[file.removeSuffix(".json")] = JSONObject(content)
                 }
             }
-        } catch (e: Exception) {
-            Log.e("BackgroundWorker", "Cannot read schemas", e)
-        }
-        return schemasMap
+        } catch (e: Exception) {}
+        return map
     }
 }

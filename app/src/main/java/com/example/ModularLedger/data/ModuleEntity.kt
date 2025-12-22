@@ -11,5 +11,6 @@ data class ModuleEntity(
     val author: String,
     val description: String,
     val folderName: String,
-    val sourceType: String // "user" or "system"
+    val sourceType: String, // "user" 或 "system"
+    val isEnabled: Boolean = true // 新增控制模組是否載入
 )
