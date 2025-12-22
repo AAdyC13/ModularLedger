@@ -1,105 +1,188 @@
-/* 設定頁面主容器 */
+/* =========================================
+   0. 全域背景強制覆蓋 (關鍵修正)
+   ========================================= */
+/* 強制將網頁底色設為淺灰，防止 Android WebView 預設綠色透出 */
+body, html {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* =========================================
+   1. 設定頁面主容器
+   ========================================= */
 .setting-main {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    height: 100%;
     width: 100%;
-    overflow-y: auto; /* 確保內容可滾動 */
-    padding: 10px;    /* 增加一點邊距 */
+    height: 100%;
+    min-height: 100vh;
+    /* 設定不透明背景，遮擋底層 */
+    background-color: rgba(255, 255, 255, 0.1) !important; 
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
     box-sizing: border-box;
-
-    /* ===== Calendar Variables (使用您提供的變數) ===== */
-    /* 若 var(--c3) 未定義，提供一個預設橘紅色 fallback */
-    --setting-option-btn-color: var(--c3, #ff5722);
-    --setting-option-btn-border-color: var(--c3, #ff5722);
-    --setting-option-btn-bg: var(--c8, #ffffff);
+    position: relative;
+    z-index: 2; /* 確保在最上層 */
 }
 
-/* 按鈕樣式 (完全依照您提供的代碼) */
-button.setting-option-btn {
-    flex: 0 0 auto; /* 修改為 auto 避免被壓縮，原為 0 1 50px */
-    min-height: 50px;
+/* =========================================
+   2. 列表項目 (設定 & 商店共用)
+   ========================================= */
+.setting-list, .module-list-container {
     display: flex;
-    align-items: center; /* 垂直置中文字 */
-    padding: 12px 16px;
-    margin: 8px 0;
-    font-size: 16px;
-    text-align: left;
-    color: var(--setting-option-btn-color);
-    background-color: var(--setting-option-btn-bg);
-    font-weight: 500; /* 修改為 500 讓文字更清晰 */
-    
-    /* 特殊邊框設計 */
-    border: none; /* 重置預設 */
-    border-top: 1px solid var(--setting-option-btn-border-color);
-    border-left: 1px solid var(--setting-option-btn-border-color);
-    border-bottom: 3px solid var(--setting-option-btn-border-color);
-    border-right: 3px solid var(--setting-option-btn-border-color);
-    border-radius: 6px;
-    
-    transition: transform 0.1s;
-    cursor: pointer;
+    flex-direction: column;
+    width: 100%;
+    padding: 0; 
+    gap: 0; 
+    margin-bottom: 20px;
 }
 
-button.setting-option-btn:active {
-    transform: scale(0.96);
-}
-
-/* 模組列表項目的特殊樣式 (繼承 button 但微調) */
-div.setting-option-btn.module-item {
-    cursor: default;
+/* 列表項目：透明背景 (因為容器已是灰色)，搭配分隔線 */
+.setting-item, .shop-item {
+    position: relative;
+    width: 100%;
+    min-height: 64px;
+    padding: 12px 24px;
+    box-sizing: border-box;
+    
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    
+    background-color: transparent; /* 透出 setting-main 的灰 */
+    
+    /* 分隔線：使用稍深灰色 */
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08); 
+    
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
-div.setting-option-btn.module-item:active {
-    transform: none; /* 取消模組項目的點擊縮放 */
+/* 點擊回饋 */
+.setting-item:active, .shop-item:active {
+    background-color: rgba(0, 0, 0, 0.05); /* 點擊時微調深淺 */
 }
 
-/* 開關樣式 (Toggle Switch) - 這是模組功能必須的 */
+/* 最後一個項目移除底線 */
+.setting-list .setting-item:last-child {
+    border-bottom: none;
+}
+
+/* =========================================
+   3. 文字排版
+   ========================================= */
+.setting-info, .shop-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+    padding-right: 15px;
+}
+
+.setting-info h3, .shop-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333333; /* 深黑標題 */
+    text-align: left;
+}
+
+.setting-info p, .shop-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #757575; /* 標準灰色副標 */
+    line-height: 1.4;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 版本號標籤 */
+.version-tag {
+    font-size: 11px;
+    color: #fff;
+    background-color: #9e9e9e;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-weight: normal;
+}
+
+.arrow-icon {
+    font-size: 18px;
+    color: #9e9e9e;
+}
+
+/* =========================================
+   4. 控制元件
+   ========================================= */
 .switch {
     position: relative;
     display: inline-block;
-    width: 46px;
-    height: 24px;
+    width: 40px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-left: 10px;
 }
-
 .switch input { opacity: 0; width: 0; height: 0; }
-
 .slider {
     position: absolute;
     cursor: pointer;
     top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
+    background-color: #bdbdbd;
+    transition: .3s;
     border-radius: 34px;
 }
-
 .slider:before {
     position: absolute;
     content: "";
-    height: 18px; width: 18px;
-    left: 3px; bottom: 3px;
+    height: 16px; width: 16px;
+    left: 2px; bottom: 2px;
     background-color: white;
-    transition: .4s;
+    transition: .3s;
     border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
+input:checked + .slider { background-color: #ff5722; }
+input:checked + .slider:before { transform: translateX(20px); }
 
-input:checked + .slider {
-    background-color: var(--setting-option-btn-color); /* 跟隨按鈕顏色 */
-}
-
-input:checked + .slider:before {
-    transform: translateX(22px);
-}
-
-/* 載入與錯誤訊息 */
-.loading, .error, .empty {
+/* 商店按鈕 */
+.action-btn {
+    padding: 6px 16px;
+    background-color: transparent;
+    color: #ff5722;
+    border: 1px solid #ff5722;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    min-width: 60px;
     text-align: center;
-    padding: 20px;
-    color: #888;
 }
-.error { color: #d9534f; }
+
+.action-btn:active {
+    background-color: rgba(255, 87, 34, 0.1);
+}
+
+.action-btn.installed {
+    border-color: transparent;
+    color: #4caf50;
+    cursor: default;
+}
+
+/* 狀態訊息 */
+.status-msg {
+    text-align: center;
+    padding: 40px;
+    color: #757575;
+    font-size: 14px;
+    width: 100%;
+}
+.error-msg { color: #d32f2f; }

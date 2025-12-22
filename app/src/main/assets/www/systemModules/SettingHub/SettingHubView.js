@@ -5,9 +5,8 @@ export default class SettingHubView {
         this.Agent = null;
         this.container = null;
         this.eventPlatform = null;
-        this.containerChecked = false;
         this.bridge = null;
-        this.pageID = "SettingHub"; // 這是我們在 Router 註冊的 ID
+        this.pageID = "SettingHub";
 
         this.options = [
             {
@@ -58,53 +57,74 @@ export default class SettingHubView {
     }
 
     setOnEvents() {
-        // 初始化授權
         this.eventPlatform.on("authorizeSettingHub_options", (data) => {
-            if (!data.dom) return;
-            this.container = data.dom;
-            this.containerChecked = true;
-            // 第一次載入時渲染
-            this.renderMainMenu();
-        });
+            if (data.dom) {
+                this.container = data.dom;
+            } else if (!this.container) {
+                const main = document.querySelector('#setting-main');
+                if (main) this.container = main.parentElement; 
+            }
 
-        // [強力修復] 導航重置機制
-        // 無論之前在什麼狀態，只要 Router 說「現在去 SettingHub」，我們就重置回主選單
-        this.eventPlatform.on('Router:Finish_navigate', (targetPageID) => {
-            // 寬鬆比對 ID，確保抓到導航事件
-            if (targetPageID && targetPageID.includes(this.pageID)) {
-                this.logger.debug('SettingHub accessed: Force resetting to Main Menu.');
+            if (this.container) {
+                this.logger.debug("[SettingHub] Resetting to Main Menu.");
                 this.renderMainMenu();
+            } else {
+                this.logger.error("[SettingHub] Container missing.");
             }
         });
+    }
+
+    async showToast(message) {
+        if (this.bridge && typeof this.bridge.callAsync === 'function') {
+            try {
+                await this.bridge.callAsync('SYS:showToast', { message: message });
+            } catch (e) {
+                console.error("Toast error:", e);
+            }
+        } else {
+            console.log("Toast:", message);
+        }
     }
 
     async optionsHandler(data) {
         switch (data.methodName) {
             case 'openModuleShop': await this.openModuleShop(); break;
             case 'openModuleSettings': await this.openModuleSettings(); break;
-            case 'theme': this.bridge.showToast('功能開發中...'); break;
-            default: this.bridge.showToast('此功能尚未開放'); break;
+            case 'theme': this.showToast('功能開發中...'); break;
+            default: this.showToast('此功能尚未開放'); break;
         }
     }
 
-    // 渲染主選單 (列表模式)
+    getContentContainer() {
+        if (!this.container) return null;
+        let target = this.container.querySelector('#setting-main');
+        if (!target) {
+            if(this.container.id === 'setting-main' || this.container.classList.contains('setting-main')) {
+                target = this.container;
+            } else {
+                target = document.createElement('div');
+                target.id = 'setting-main';
+                this.container.appendChild(target);
+            }
+        }
+        return target;
+    }
+
     renderMainMenu() {
-        if (!this.container) return;
-        const contentContainer = this.container.querySelector('#setting-main');
+        const contentContainer = this.getContentContainer();
         if (!contentContainer) return;
 
-        // 強制清空內容
+        // 重置為灰色背景
         contentContainer.innerHTML = '';
         contentContainer.className = 'setting-main'; 
 
         const list = document.createElement('div');
-        list.className = 'setting-list'; // 這是列表容器
+        list.className = 'setting-list';
 
         this.options.forEach(option => {
             const item = document.createElement('div');
             item.className = 'setting-item';
             
-            // 點擊整條觸發
             item.onclick = () => {
                 if (option.handler) this.optionsHandler(option.handler);
             };
@@ -114,6 +134,7 @@ export default class SettingHubView {
                     <h3>${option.name}</h3>
                     <p>${option.description}</p>
                 </div>
+                <div class="arrow-icon">›</div>
             `;
             list.appendChild(item);
         });
@@ -123,37 +144,39 @@ export default class SettingHubView {
     }
 
     updateHeader(title, showBack) {
-        const headerTitle = this.container.querySelector('.sys-label-header-title');
+        const headerTitle = document.querySelector('.sys-label-header-title');
         if (headerTitle) headerTitle.textContent = title;
 
-        const backBtn = this.container.querySelector('#back-btn');
+        const backBtn = document.querySelector('#back-btn');
         if (backBtn) {
             const newBtn = backBtn.cloneNode(true);
             backBtn.parentNode.replaceChild(newBtn, backBtn);
             
+            newBtn.disabled = false;
+            newBtn.classList.remove('disabled');
+            newBtn.style.display = 'flex';
+
             if (showBack) {
-                newBtn.disabled = false;
-                newBtn.classList.remove('disabled');
-                newBtn.style.display = 'flex'; // 確保顯示
-                newBtn.onclick = () => this.renderMainMenu(); // 點擊返回
+                newBtn.onclick = () => this.renderMainMenu(); 
             } else {
-                newBtn.disabled = true;
-                newBtn.classList.add('disabled');
-                // newBtn.style.display = 'none'; // 視需求決定是否隱藏
+                newBtn.onclick = () => {
+                     this.Agent.eventPlatform.emit('Router:Navigate', { pageID: 'systemPage.Home' });
+                };
             }
         }
     }
 
-    // --- 模組商店 ---
     async openModuleShop() {
-        const contentContainer = this.container.querySelector('#setting-main');
-        contentContainer.innerHTML = '<div class="loading">載入商店中...</div>';
+        const contentContainer = this.getContentContainer();
+        if(!contentContainer) return;
+
+        contentContainer.innerHTML = '<div class="status-msg">正在載入模組商店...</div>';
         this.updateHeader('模組商店', true);
         
         try {
             const htmlContent = await this.bridge.fetchSystemModules('moduleShop/ShopPage.html', 'text');
-            if (!htmlContent) throw new Error('無法載入商店介面');
-            contentContainer.innerHTML = htmlContent;
+            contentContainer.innerHTML = htmlContent || ''; 
+            
             const shopPage = new ShopPage();
             await shopPage.init({
                 ...this.Agent,
@@ -162,14 +185,15 @@ export default class SettingHubView {
             });
         } catch (e) {
             this.logger.error(e);
-            contentContainer.innerHTML = `<div class="error">載入失敗: ${e.message}</div>`;
+            contentContainer.innerHTML = `<div class="status-msg error-msg">載入失敗: ${e.message}</div>`;
         }
     }
 
-    // --- 模組設置 ---
     async openModuleSettings() {
-        const contentContainer = this.container.querySelector('#setting-main');
-        contentContainer.innerHTML = '<div class="loading">讀取模組清單...</div>';
+        const contentContainer = this.getContentContainer();
+        if(!contentContainer) return;
+
+        contentContainer.innerHTML = '<div class="status-msg">讀取模組清單...</div>';
         this.updateHeader('模組設置', true);
 
         try {
@@ -180,16 +204,16 @@ export default class SettingHubView {
             list.className = 'setting-list';
 
             if (!modules || modules.length === 0) {
-                list.innerHTML = '<div class="empty">無已安裝模組</div>';
+                contentContainer.innerHTML = '<div class="status-msg">無已安裝模組</div>';
             } else {
                 modules.forEach(mod => {
                     const item = document.createElement('div');
-                    item.className = 'setting-item module-item';
+                    item.className = 'setting-item'; 
                     const isEnabled = mod.isEnabled !== false; 
 
                     item.innerHTML = `
                         <div class="setting-info">
-                            <h3>${mod.name} <span style="font-size:0.8em;color:#aaa">v${mod.version}</span></h3>
+                            <h3>${mod.name} <span class="version-tag">v${mod.version}</span></h3>
                             <p>${mod.description || '無描述'}</p>
                         </div>
                         <div class="setting-action">
@@ -200,7 +224,6 @@ export default class SettingHubView {
                         </div>
                     `;
                     
-                    // 阻止點擊整條觸發開關
                     item.onclick = (e) => e.stopPropagation();
 
                     item.querySelector('input').addEventListener('change', (e) => {
@@ -209,21 +232,21 @@ export default class SettingHubView {
 
                     list.appendChild(item);
                 });
+                contentContainer.appendChild(list);
             }
-            contentContainer.appendChild(list);
 
         } catch (e) {
             this.logger.error(e);
-            contentContainer.innerHTML = `<div class="error">讀取失敗: ${e.message}</div>`;
+            contentContainer.innerHTML = `<div class="status-msg error-msg">讀取失敗: ${e.message}</div>`;
         }
     }
 
     async handleModuleToggle(moduleId, enable) {
         try {
             await this.bridge.callAsync('SYS:toggleModule', { id: moduleId, enable: enable });
-            this.bridge.showToast(enable ? '模組已啟用 (重啟生效)' : '模組已停用 (重啟生效)');
+            this.showToast(enable ? '模組已啟用 (重啟生效)' : '模組已停用 (重啟生效)');
         } catch (e) {
-            this.bridge.showToast('設定失敗');
+            this.showToast('設定失敗');
             await this.openModuleSettings();
         }
     }

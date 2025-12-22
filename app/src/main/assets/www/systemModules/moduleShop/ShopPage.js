@@ -11,161 +11,125 @@ export default class ShopPage {
     async init(agentInterface) {
         this.dom = agentInterface.myDOM;
         this.logger = agentInterface.tools.logger || console;
-        
-        // 1. 優先使用從 SettingHubView 傳遞下來的 bridge，若無則降級建立新實例
-        // 這是關鍵修正：確保與 ComponentManager 傳遞的 bridge 一致
         this.bridge = agentInterface.bridge || new Bridge(this.logger);
 
-        if (!this.dom) {
-            this.logger.error('[Shop] Error: DOM not available.');
-            return false;
-        }
+        if (!this.dom) return false;
 
-        // 處理掛載事件
         if (agentInterface.systemRadio && agentInterface.systemRadio.myDOM_onMount) {
             agentInterface.systemRadio.myDOM_onMount(() => {
                 this.fetchAndRenderModules();
             });
         }
 
-        this.renderLoading();
         await this.fetchAndRenderModules();
-        
         return true;
     }
 
-    renderLoading() {
-        if (!this.dom) return;
-        const container = this.dom.querySelector('#shop-container');
-        if (container) {
-            container.innerHTML = '<div class="shop-loading">正在載入模組商店...</div>';
+    async showToast(msg) {
+        if(this.bridge && this.bridge.callAsync) {
+            try { await this.bridge.callAsync('SYS:showToast', {message: msg}); } catch(e){}
+        } else {
+            console.log("Toast:", msg);
         }
     }
 
     async fetchAndRenderModules() {
-        if (!this.dom) return;
+        const container = this.dom.querySelector('#shop-container') || this.dom;
+        // 檢查是否已有內容，避免重複
+        if (!container.querySelector('.module-list-container')) {
+             container.innerHTML = '<div class="status-msg">正在載入模組商店...</div>';
+        }
+
         try {
             const apiUrl = `${this.serverUrl}/api/modules`;
-            this.logger.debug(`[Shop] Fetching: ${apiUrl}`);
-
-            // 使用 fetch API 獲取清單
             const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+            
+            if (!response.ok) throw new Error(`Status: ${response.status}`);
             const result = await response.json();
             
             if (result.success) {
-                this.renderList(result.data);
+                this.renderList(container, result.data);
             } else {
-                this.renderError(result.message || '伺服器發生錯誤');
+                this.renderError(container, result.message || '無法取得資料');
             }
         } catch (error) {
             this.logger.error(`[Shop] Error: ${error}`);
-            this.renderError('無法連接至商店伺服器。');
-        }
-    }
-
-    renderError(msg) {
-        if (!this.dom) return;
-        const container = this.dom.querySelector('#shop-container');
-        if (container) {
-            container.innerHTML = `
-                <div class="shop-error">
-                    <p>${msg}</p>
-                    <button id="retry-btn">重試</button>
-                </div>
-            `;
-            const retryBtn = container.querySelector('#retry-btn');
-            if (retryBtn) {
-                retryBtn.addEventListener('click', () => {
-                    this.renderLoading();
-                    this.fetchAndRenderModules();
-                });
+            let msg = '無法連接至商店伺服器';
+            if (window.location.protocol === 'https:' && this.serverUrl.startsWith('http:')) {
+                msg += '<br><small>(請檢查網路或 App 安全設定)</small>';
             }
+            this.renderError(container, msg);
         }
     }
 
-    renderList(modules) {
-        if (!this.dom) return;
-        const container = this.dom.querySelector('#shop-container');
-        if (!container) return;
+    renderError(container, msg) {
+        container.innerHTML = `
+            <div class="status-msg error-msg">
+                <p>${msg}</p>
+                <button class="action-btn" id="retry-btn" style="margin-top:15px; border-color:#999; color:#666;">重試</button>
+            </div>
+        `;
+        const btn = container.querySelector('#retry-btn');
+        if(btn) btn.onclick = () => this.fetchAndRenderModules();
+    }
 
+    renderList(container, modules) {
         container.innerHTML = '';
         
         if (!modules || modules.length === 0) {
-            container.innerHTML = '<div class="shop-empty">目前沒有可用的模組</div>';
+            container.innerHTML = '<div class="status-msg">目前沒有可用的模組</div>';
             return;
         }
 
-        const list = document.createElement('div');
-        list.className = 'module-list';
+        const listDiv = document.createElement('div');
+        listDiv.className = 'module-list-container';
 
         modules.forEach(mod => {
-            const card = document.createElement('div');
-            card.className = 'module-card';
-            card.innerHTML = `
-                <div class="card-header">
-                    <h3>${mod.name}</h3>
-                    <span class="version">v${mod.version}</span>
+            const item = document.createElement('div');
+            item.className = 'shop-item'; 
+            
+            item.innerHTML = `
+                <div class="shop-info">
+                    <h3>
+                        ${mod.name} 
+                        <span class="version-tag">v${mod.version}</span>
+                    </h3>
+                    <p>${mod.description || '暫無描述'}</p>
                 </div>
-                <p class="desc">${mod.description || '無描述'}</p>
-                <div class="meta">
-                    <span>作者: ${mod.author}</span>
-                </div>
-                <button class="btn-install" data-url="${mod.downloadUrl}">下載並安裝</button>
+                <button class="action-btn" data-url="${mod.downloadUrl}">取得</button>
             `;
             
-            const btn = card.querySelector('.btn-install');
-            if (btn) {
-                btn.addEventListener('click', (e) => {
-                    this.handleInstall(mod.downloadUrl, e.target);
-                });
-            }
+            const btn = item.querySelector('.action-btn');
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                this.handleInstall(mod.downloadUrl, e.target);
+            };
 
-            list.appendChild(card);
+            listDiv.appendChild(item);
         });
 
-        container.appendChild(list);
+        container.appendChild(listDiv);
     }
 
     async handleInstall(downloadUrl, btnElement) {
-        if (!downloadUrl) return;
-
+        if (!this.bridge) return;
+        
         const originalText = btnElement.innerText;
         btnElement.disabled = true;
-        btnElement.innerText = '下載中...';
+        btnElement.innerText = '下載中';
         
-        // [修正] 改用 callAsync 呼叫 Toast，避免 showToast 不存在的問題
-        if (this.bridge) {
-            try {
-                // 嘗試呼叫原生的 Toast (方法名稱需對應 Android 端)
-                await this.bridge.callAsync('SYS:showToast', { message: '開始下載模組...' });
-            } catch (e) {
-                console.warn('Toast call failed', e);
-            }
-        }
-
         try {
-            if (!this.bridge) throw new Error('Bridge is not initialized');
-
-            // 呼叫原生下載
             const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000);
             
             if (result === true) {
-                // [修正] 同樣改用 callAsync
-                await this.bridge.callAsync('SYS:showToast', { message: '安裝成功！請至模組設置啟用。' });
-                
+                this.showToast('安裝成功');
                 btnElement.innerText = '已安裝';
                 btnElement.classList.add('installed');
             } else {
-                throw new Error('安裝過程回傳失敗');
+                throw new Error('Install failed');
             }
         } catch (error) {
-            this.logger.error(`[Shop] Install failed: ${error}`);
-            if (this.bridge) {
-                 // [修正] 同樣改用 callAsync
-                await this.bridge.callAsync('SYS:showToast', { message: '安裝失敗: ' + (error.message || '未知錯誤') });
-            }
+            this.showToast('安裝失敗');
             btnElement.disabled = false;
             btnElement.innerText = originalText;
         }
