@@ -7,16 +7,34 @@ import androidx.room.Query
 
 @Dao
 interface ModuleDao {
+    // ==========================================
+    //  區域 1: 模組管理 (來自商店分支，修復 AndroidBridge 錯誤)
+    // ==========================================
+
+    @Query("SELECT * FROM modules")
+    fun getAllModulesSync(): List<ModuleEntity> // 供 Worker 同步使用
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun insertModule(module: ModuleEntity)
+
+    @Query("DELETE FROM modules WHERE id = :moduleId")
+    fun deleteModule(moduleId: String)
+
+    // ==========================================
+    //  區域 2: 模組內部儲存 (來自 Main 分支)
+    // ==========================================
+
     // 讀取模組的特定設定
     @Query("SELECT value FROM module_storage WHERE module_id = :moduleId AND `key` = :key")
     suspend fun getValue(moduleId: String, key: String): String?
 
-    // 讀取模組的所有設定 (回傳 Map 需自定義 Converter，這裡先回傳 List 讓 Repo 處理)
+    // 讀取模組的所有設定
     @Query("SELECT * FROM module_storage WHERE module_id = :moduleId")
     suspend fun getAllEntries(moduleId: String): List<ModuleKvEntry>
 
-    // 寫入設定 (Upsert: 有則更新，無則新增)
-    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun setValue(entry: ModuleKvEntry)
+    // 寫入設定 (Upsert)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setValue(entry: ModuleKvEntry)
 
     // 刪除特定設定
     @Query("DELETE FROM module_storage WHERE module_id = :moduleId AND `key` = :key")
