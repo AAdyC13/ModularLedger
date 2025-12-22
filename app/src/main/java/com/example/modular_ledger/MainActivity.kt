@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         // 在此設定商店伺服器位置
-        private const val SERVER_URL = "http://163.18.29.38:3000" 
+        private const val SERVER_URL = "http://163.18.26.227:3001"
         private const val LOCAL_URL = "https://appassets.androidplatform.net/assets/www/index.html"
     }
 
