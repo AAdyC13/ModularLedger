@@ -1,7 +1,7 @@
-import { BasePage } from '../pages/BasePage.js';
-import { Bridge } from '../js/bridge.js';
+import { BasePage } from '../../pages/BasePage.js';
+import { Bridge } from '../../js/bridge.js';
 
-export class ShopPage extends BasePage {
+export default class ShopPage extends BasePage {
     constructor(router) {
         super(router);
         // 初始化 Bridge，用於呼叫原生下載

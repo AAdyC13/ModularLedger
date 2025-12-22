@@ -10,7 +10,8 @@ const runtimeConfig = {
      */
     whitelist: [
         'system.HomePage',
-        'system.Recorder'
+        'system.Recorder',
+        'system.ModuleShop'
     ],
     layoutIDs: {
         'tcb': 'tcb-layout',
@@ -27,7 +28,8 @@ const runtimeConfig = {
         { pageID: 'systemPage.Recorder', layoutID: 'full' },
         { pageID: 'systemPage.Settings', layoutID: 'full' },
         { pageID: 'systemPage.Accounts', layoutID: 'tabs' },
-        { pageID: 'systemPage.Searcher', layoutID: 'search' }
+        { pageID: 'systemPage.Searcher', layoutID: 'search' },
+        { pageID: 'system.ModuleShop.Main', layoutID: 'full' }
     ],
     indexPage: 'systemPage.Home',
 
