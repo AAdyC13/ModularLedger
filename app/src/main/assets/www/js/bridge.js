@@ -58,7 +58,7 @@ export class Bridge {
         this.pendingTasks.delete(taskId);
 
         if (status === 'SUCCESS') {
-            this.logger.debug(`Task ${taskId} completed successfully, data: ${JSON.stringify(data)}`);
+            // this.logger.debug(`Task ${taskId} completed successfully, data: ${JSON.stringify(data)}`);
             task.resolve(data);
         } else {
 

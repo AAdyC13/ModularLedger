@@ -85,7 +85,7 @@ export class ElementManager {
                         switch (handler.event) {
                             case 'click':
                                 //attachedFunc type = function or false
-                                this.logger.debug(`Click handler attached for selector [${handler.selector}]`);
+                                // this.logger.debug(`Click handler attached for selector [${handler.selector}]`);
                                 attachedFunc = this.attachHandler(dom, handler.event);
 
                                 // Record connecting pages if navigation is involved
@@ -138,7 +138,7 @@ export class ElementManager {
         });
         PageElement.elements_checked = true;
         const word = elemCount === 1 || elemCount === 0 ? 'element' : 'elements';
-        this.logger.debug(`Finish putting ${elemCount} ${word} to page [${PageElement.id}]`);
+        // this.logger.debug(`Finish putting ${elemCount} ${word} to page [${PageElement.id}]`);
     }
     attachDataset(dom, selector, action, row_parameters) {
         const element = dom.querySelector(selector);

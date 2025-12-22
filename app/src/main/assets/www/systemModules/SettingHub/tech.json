@@ -61,7 +61,20 @@
 				"selector": ""
 			},
 
-			"component_dependencies": []
+			"component_dependencies": [],
+			"component_tools": [
+				"callUI:Toast",
+				"callUI:Alert",
+				"callUI:Prompt",
+				"callUI:Wait",
+				"callUI:AdjustLayout",
+				"callUI:AboutApp",
+				"systemInterface:Themes",
+				"systemInterface:ModuleManage",
+				"systemInterface:ModuleShop",
+				"systemInterface:Language",
+				"systemInterface:AccountsIO"
+			]
 		}
 	]
 }
