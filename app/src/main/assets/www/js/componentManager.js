@@ -12,18 +12,10 @@ export class ComponentManager {
 
         this.componentsByPage = {};    // 輔助索引1
         this.componentsByMod = {};     // 輔助索引2
-        this.modCounter = {}; // 計數每個模組的插件數量，目前由於是mod自定義id，所以沒有實際作用
+        this.modCounter = {}; // 計數每個模組的插件數量
 
-        // this.definitions = new Map();
-        // this.definitionAliases = new Map();
-        // this.templateCache = new Map();
-        // this.classRegistryByComponent = new Map();
-        // this.classRegistryByName = new Map();
-        // this.handlesById = new Map();
-        // this.singletons = new Map();
-        // this.eventHub = new EventHub();
-
-
+        // [新增] 用於暫存尚未就緒的組件授權請求
+        this.pendingAuthorizations = []; 
     }
     init() {
         this.eventAgent.on("MM:Module_enabled:registerComponents", this.analysisBlueprint.bind(this));
@@ -38,10 +30,14 @@ export class ComponentManager {
         const dom = data.dom;
         const componentID = `${moduleID}.${componentName}`;
         const component = this.components[componentID];
+        
+        // [修正] 如果組件尚未存在，則將請求暫存起來
         if (!component) {
-            this.logger.error(`Component [${componentID}] does not exist for authorization`);
+            this.logger.debug(`Component [${componentID}] not ready for authorization, queuing request.`);
+            this.pendingAuthorizations.push(data);
             return;
         }
+        
         const eventName = `Component:${componentID}:${methodName}`;
         this.logger.debug(`Emitting event [${eventName}] for Component authorization`);
         await this.eventPlatform.emit(eventName, { dom: dom });
@@ -78,7 +74,6 @@ export class ComponentManager {
         this.componentsByPage[PageElement.id]?.forEach(async (compID) => {
             const comp = this.components[compID];
             const slotName = comp.panel_location.selector;
-            // this.logger.debug(`PageElement [${PageElement.getRoot().outerHTML}] slotID [${PageElement.getRoot().querySelector("div.page-header")?.outerHTML}]`);
             try {
                 const slot = PageElement.getRoot().querySelector(`${slotName}`);
                 if (!slot) {
@@ -86,7 +81,6 @@ export class ComponentManager {
                     return;
                 }
                 if (comp.type === "Panel") {
-                    // this.logger.debug(`Putting component [${comp.id}] to page [${PageElement.id}] at slot [${comp.panel_location.selector}], DOM: ${comp.dom}`);
                     if (!comp.dom) {
                         this.logger.warn(`Component [${comp.id}] of type Panel has no DOM to append in Page [${PageElement.id}]`);
                         return;
@@ -104,7 +98,6 @@ export class ComponentManager {
                 this.logger.debug(`Initializing Component [${comp.id}]`);
                 const result = await comp.init();
                 if (result === false) {
-                    // 警告! module component 回報初始化失敗，應該要有後續取消此 component 在page上的機制
                     this.logger.error(`Component [${comp.id}] failed to initialize.`);
                 } else {
                     this.logger.debug(`Initialized Component [${comp.id}]`);
@@ -115,7 +108,6 @@ export class ComponentManager {
         });
         PageElement.components_checked = true;
         this.logger.debug(`Finish putting [${PageElement.id}] components:${compCount}`);
-        // this.eventAgent.emit('CM:Finish_put_components_to_page', PageElement.id, {});
     }
     async createComponent(modID, compTech, folderName) {
         this.modCounter[modID] = (this.modCounter[modID] || 0) + 1;
@@ -174,15 +166,35 @@ export class ComponentManager {
             this.componentsByPage[compTech.panel_location.pageID].add(id);
         }
         if (type === "Logic") {
-            // Logic type 不需要 DOM，直接初始化
             await this.components[id].init();
         }
         this.componentsByMod[modID] ??= new Set();
         this.componentsByMod[modID].add(id);
         this.logger.debug(`Component created : ${id}`);
-        return id;
 
+        // [新增] 檢查並處理此組件的暫存授權請求
+        await this.processPendingAuthorizations(id);
+
+        return id;
     }
+
+    // [新增] 處理暫存請求的輔助方法
+    async processPendingAuthorizations(componentID) {
+        const pending = this.pendingAuthorizations.filter(data => 
+            `${data.moduleID}.${data.componentName}` === componentID
+        );
+        
+        // 從暫存列隊中移除已處理的項目
+        this.pendingAuthorizations = this.pendingAuthorizations.filter(data => 
+            `${data.moduleID}.${data.componentName}` !== componentID
+        );
+
+        for (const data of pending) {
+            this.logger.debug(`Processing queued authorization for [${componentID}]`);
+            await this.authorize_element(data);
+        }
+    }
+
     async deleteComponent(id) {
         const component = this.components[id];
         if (!component) {
@@ -205,7 +217,6 @@ export class ComponentManager {
             throw new Error(`Failed to load JS file: ${path} in module: ${folderName}`);
         }
         if (!res.default) {
-            //this.logger.debugA(`${res},${res.defult} `);
             throw new Error(`Failed to load default export from ${path} in module ${folderName}`);
         }
         return new res.default;
@@ -224,11 +235,6 @@ export class ComponentManager {
             shadow.appendChild(link);
         }
 
-        // --- component 固定根節點 ---
-        // const root = document.createElement('div');
-        // root.className = 'component-root';
-        // root.innerHTML = html;
-
         shadow.innerHTML = shadow.innerHTML + html;
 
         return host;
@@ -239,14 +245,7 @@ class ComponentAgent {
     // 注入監測器到DOM
     static createProxyDOM(host, registry) {
         const shadow = host.shadowRoot;
-        // 找到你的 HTML 容器
-        // const wrapper = shadow.querySelector('div');
-        const wrapper = shadow; //取消 div 包裝層
-
-        // 針對 wrapper 建 Proxy
-        // 不知道為什麼要這樣做，先留著
-        //const proxyDOM = createDOMProxy(wrapper, registry); //沒有createDOMProxy這種函數
-
+        const wrapper = shadow; 
         return wrapper;
     }
     constructor(
@@ -258,15 +257,13 @@ class ComponentAgent {
         this.modID = modID;
         this.dependenciesComponent = dependenciesComponent;
         this.eventPlatform = eventPlatform;
-        this.eventIDs = {}; // 儲存事件訂閱 ID 以便取消訂閱
+        this.eventIDs = {}; 
         this.timerBucket = timerBucket;
         this.logger = logger;
-        this.listenerRegistry = listenerRegistry; // Agent 擁有監聽器管理介面
+        this.listenerRegistry = listenerRegistry; 
 
-        this.object = ComponentObject; // Component 物件實例
-
-        // 此為 Component 的未經包裝 shadow DOM 節點，禁止 Component 直接操作
-        this.dom = dom; // 如果是 Panel 類型則有 HTML物件，否則為 null
+        this.object = ComponentObject; 
+        this.dom = dom; 
         this.panel_location = panel_location;
 
     }
@@ -278,7 +275,6 @@ class ComponentAgent {
         let myDOM = null;
         if (this.dom) {
             myDOM = ComponentAgent.createProxyDOM(this.dom, this.listenerRegistry);
-            // 警告! Proxy系統未實現，先直接給原始DOM
         }
         this.interface = {
             myDOM: myDOM,
@@ -286,13 +282,11 @@ class ComponentAgent {
                 timer: this.timerBucket,
                 logger: this.logger
             },
-            // CM內部事件平台
             eventPlatform: {
                 emit: this.eventPlatform_emit.bind(this),
                 on: this.eventPlatform_on.bind(this),
                 off: this.eventPlatform_off.bind(this),
             },
-            //接收CM的重要系統廣播
             systemRadio: {
                 myDOM_onMount: this.systemRadio_myDOM_onMount.bind(this),
                 myDOM_onUnmount: this.systemRadio_myDOM_onUnmount.bind(this),
@@ -356,8 +350,6 @@ class EventPlatform {
     constructor() {
         this._events = new Map();
         this._subscriptionIndex = new Map();
-
-        //警告! 這樣的實作在非常高頻事件下可能會有記憶體洩漏風險
         this._seed = 0;
     }
 
@@ -471,23 +463,9 @@ class TimerBucket {
     }
 }
 
-/**
- * ListenerRegistry 類用於管理 DOM 元素的監聽器。
- * 它提供添加、移除特定監聽器以及移除所有監聽器的功能，以避免記憶體洩漏。
- * 
- * 輸入：
- * - add(elem, type, listener, options): elem (DOM 元素), type (事件類型，如 'click'), listener (事件處理函數), options (可選的 addEventListener 選項)
- * - remove(elem, type, listener): elem (DOM 元素), type (事件類型), listener (事件處理函數)
- * - removeAll(): 無輸入參數
- * 
- * 輸出：
- * - add: 無返回值
- * - remove: 無返回值
- * - removeAll: 無返回值
- */
 class ListenerRegistry {
     constructor() {
-        this.listeners = new Map(); // element → [{type, listener, options}]
+        this.listeners = new Map(); 
     }
 
     add(elem, type, listener, options) {

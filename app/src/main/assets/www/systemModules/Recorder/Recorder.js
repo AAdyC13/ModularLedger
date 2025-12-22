@@ -67,6 +67,10 @@ export default class Recorder {
         this.eventPlatform = Agent.eventPlatform;
         this.setOnEvents();
         this.logger.debug(`Recorder initialized`);
+        
+        // 建議：在此處呼叫 setupCalculator，否則 calculator 永遠是 null
+        // await this.setupCalculator(); 
+        
         return true;
     }
 
@@ -193,8 +197,6 @@ export default class Recorder {
             return;
         }
 
-
-
         // ---- 改為使用 track 推動 old -> new（平推效果、無重疊） ----
         const track = document.createElement('div');
         track.classList.add('record-track');
@@ -249,15 +251,11 @@ export default class Recorder {
             newFormContainer.style.transform = '';
             this.recordMain.appendChild(newFormContainer);
 
-<<<<<<< HEAD
-=======
             // 重新獲取 DOM 引用
             this.recordFormContainer = newFormContainer;
         }, 400);
         // ---- end track 推動邏輯 ----
 
-
->>>>>>> origin/前端設計
         // 初始化計算機（金額欄位）
         // await this.initCalculator();
     }
@@ -317,7 +315,7 @@ export default class Recorder {
                 // 時間類型
                 return `<input type="datetime-local" id="${fieldId}" class="${className}" />`;
             case 'number':
-                // 時間類型
+                // 數字類型
                 return `<input type="number" id="${fieldId}" class="${className}" placeholder="${placeholder}" />`;
             case 'text':
             default:
@@ -329,27 +327,19 @@ export default class Recorder {
     /**
      * 初始化計算機 (修正版)
      */
-<<<<<<< HEAD
     async initCalculator() {
         try {
             if (!this.calculator) {
                 this.logger.warn('Calculator not ready yet');
                 return;
             }
-=======
-    // async initCalculator() {
-    //     try {
-    //         const calculator = this.getComponent('calculator');
-    //         if (!calculator) return;
->>>>>>> origin/前端設計
 
-    //         // 找到當前表單中類型為 calculator 的欄位
-    //         const index = this.getFormIndex(this.recordType);
-    //         if (index === -1) return;
-    //         const fields = this.formConfigs[index].fields;
-    //         const calculatorField = fields.find(field => field.type === 'calculator');
+            // 找到當前表單中類型為 calculator 的欄位
+            const index = this.getFormIndex(this.recordType);
+            if (index === -1) return;
+            const fields = this.formConfigs[index].fields;
+            const calculatorField = fields.find(field => field.type === 'calculator');
 
-<<<<<<< HEAD
             if (calculatorField) {
                 // 從 fieldIdMap 中查找對應的 ID
                 const fieldId = this.fieldIdMap[calculatorField.name];
@@ -362,20 +352,6 @@ export default class Recorder {
             console.error('初始化計算機失敗:', error);
         }
     }
-=======
-    //         if (calculatorField) {
-    //             // 從 fieldIdMap 中查找對應的 ID
-    //             const fieldId = this.fieldIdMap[calculatorField.name];
-    //             if (fieldId) {
-    //                 await calculator.init(fieldId);
-    //                 console.log(`✓ Calculator initialized for ${calculatorField.name} (${fieldId})`);
-    //             }
-    //         }
-    //     } catch (error) {
-    //         console.error('初始化計算機失敗:', error);
-    //     }
-    // }
->>>>>>> origin/前端設計
 
     /**
      * 儲存記錄

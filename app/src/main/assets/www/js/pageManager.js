@@ -6,6 +6,8 @@ export class PageManager {
         this.PageElements = {}; // page elements
         this.indexPage = null;
         this.moduleCssLinks = document.getElementById('sys-module-css-links');
+        // [新增] 標記系統模組是否已宣告完全啟動
+        this.isSystemFullyEnabled = false;
     }
     async init(logger_forPageElement) {
         try {
@@ -35,8 +37,6 @@ export class PageManager {
                 await this.createPage(modID,
                     pageID, html_layout, css_template, page_options, registerFreeElements, registerFreeComponents);
 
-
-
             } catch (error) {
                 this.logger.error(`Failed to register page [${pageID}]: ${error}`);
             }
@@ -45,6 +45,7 @@ export class PageManager {
 
     }
     handleModuleFullyEnabled(data) {
+        this.isSystemFullyEnabled = true; // [標記] 系統已就緒
         for (const pageID in this.PageElements) {
             this.checkingPage(pageID);
         }
@@ -68,16 +69,18 @@ export class PageManager {
             this.logger.error(`PageManager preLoadPages failed: ${error}`);
         }
     }
+    
+    // [修正] 設定首頁時，若頁面不存在不報錯，改為等待
     async indexPagePreload(pageID) {
         this.indexPage = pageID;
         try {
             const pageElement = this.PageElements[pageID];
-            if (!pageElement) {
-                this.logger.error(`Index page [${pageID}] not found`);
-                throw new Error(`Index page [${pageID}] not found`);
+            if (pageElement) {
+                this.logger.debug(`Index page preload: ${pageID}`);
+                await this.sendingPageToRouter(pageID);
+            } else {
+                this.logger.info(`Index page target set to [${pageID}], waiting for page creation...`);
             }
-            this.logger.debug(`Index page preload: ${pageID}`);
-            await this.sendingPageToRouter(pageID);
         } catch (error) {
             this.logger.error(`PageManager indexPageLoad failed: ${error}`);
         }
@@ -118,10 +121,7 @@ export class PageManager {
         // 警告! 模組css目前將堆疊至head，未來可能需要改成按頁面載入與卸載
         if (link) this.moduleCssLinks.appendChild(link);
 
-
-
         if (page_options.allowReplaceElements) {
-
             for (const sel of registerFreeElements) {
                 freeElements.set(sel.selector, {
                     changeInnerTEXT: !!sel.options.changeInnerTEXT,
@@ -131,7 +131,6 @@ export class PageManager {
         }
 
         if (page_options.allowAddComponents) {
-
             for (const sel of registerFreeComponents) {
                 components_spot.set(sel.selector, {
                     // 未來你要加 options 再放這裡
@@ -141,8 +140,21 @@ export class PageManager {
 
         this.PageElements[pageID] = new PageElement(modID, pageID, dom, freeElements, components_spot);
         this.logger.debug(`Page created: ${pageID}`);
+
+        // [新增] 如果系統已經 fully enabled，補做 checkingPage
+        if (this.isSystemFullyEnabled) {
+            this.checkingPage(pageID);
+        }
+
+        // [新增] 如果這剛好是我們在等的首頁，觸發 Router 載入
+        if (this.indexPage === pageID) {
+            this.logger.debug(`Index page created [${pageID}], triggering preload.`);
+            await this.sendingPageToRouter(pageID);
+        }
+
         return true;
     }
+    
     async cssExists(url) {
         try {
             const res = await this.bridge.fetch(url);

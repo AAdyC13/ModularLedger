@@ -19,6 +19,7 @@ class Runtime {
     constructor() {
         this.isInitialized = false;
         this.indexPageLoaded = false;
+        this.bridge = null; // 確保有定義 bridge 屬性
     }
 
     /**
@@ -62,12 +63,13 @@ class Runtime {
             this.ui = uiManager.createAgent('Runtime');
             loggerManager.setUiAgent(uiManager.createAgent('Logger')); // 傳遞 UI 代理給 LoggerManager
 
-            const bridge = new Bridge(new Logger('Bridge')); // 與原生交互橋樑
+            // [修正點 1] 優先初始化 Bridge，確保後續 Manager 可以使用
+            this.bridge = new Bridge(new Logger('Bridge')); 
             this.logger.debug('Basic tools build successfully');
+            
             // --------------------------------------------
             // 2. 建立核心管理器實例（但不初始化）
             // --------------------------------------------
-
 
             const errorHandler = new ErrorHandler(
                 new Logger('ErrorHandler'),
@@ -77,7 +79,7 @@ class Runtime {
 
             const modulesManager = new ModulesManager(
                 new Logger('ModulesManager'),
-                bridge,
+                this.bridge, // 傳入 bridge
                 eventHub.createAgent('ModulesManager'),
                 runtimeConfig.whitelist || [],
                 runtimeConfig.moduleLoadTimeout_s || 20
@@ -86,7 +88,7 @@ class Runtime {
 
             const pageManager = new PageManager(
                 new Logger('PageManager'),
-                bridge,
+                this.bridge, // 傳入 bridge
                 eventHub.createAgent('PageManager'),
                 runtimeConfig.layoutIDs || {}
             );
@@ -107,7 +109,7 @@ class Runtime {
             const componentManager = new ComponentManager(
                 new Logger('ComponentManager'),
                 eventHub.createAgent('ComponentManager'),
-                bridge,
+                this.bridge, // 傳入 bridge
                 uiManager.createAgent('ComponentManager')
             );
             this.logger.debug('ComponentManager build successfully');
@@ -123,7 +125,7 @@ class Runtime {
                     pageManager.init(new Logger('Page')),
                     elementManager.init(new Logger('Element')),
                     router.init(),
-                    componentManager.init(),
+                    componentManager.init(), 
                 ]);
             } catch (initError) {
                 this.logger.error(`System initialization error: ${initError}`);
@@ -139,30 +141,40 @@ class Runtime {
                 throw new Error('indexPage is not defined in runtimeConfig');
             }
 
-            // router 和 pageManager 需要知道首頁是什麼
+            // 設定監聽器：當 PageManager 載入完首頁時觸發
             await this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
             this.eventAgent.on('PM:Finish_preloade_page', (PE) => {
                 if (PE.id === runtimeConfig.indexPage) {
                     this.indexPageLoaded = true;
                 }
             });
+
+            // 開始載入系統模組
             await modulesManager.enableSystemModules();
 
-
-
+            // [修正點 2] 關鍵：等待首頁載入完成後才啟動 Router
+            // 使用 monitorModuleLoading 輪詢 this.indexPageLoaded 狀態
+            const isLoaded = await this.monitorModuleLoading(runtimeConfig.moduleLoadTimeout_s || 20);
+            
+            if (!isLoaded) {
+                this.logger.warn(`Timeout waiting for index page [${runtimeConfig.indexPage}] to load. Proceeding anyway...`);
+            } else {
+                this.logger.info(`Index page [${runtimeConfig.indexPage}] ready.`);
+            }
 
             // --------------------------------------------
             // x. finished
             // --------------------------------------------
-            window.errorHandler = errorHandler; // 供崩潰畫面使用
+            window.errorHandler = errorHandler; 
 
-            // (For Debugging) 將 UI Agent 暴露到全域
             if (runtimeConfig.logLevel === 'debug') {
                 window.UIAgent = uiManager.createAgent('DebugConsole');
                 this.logger.info('UI Agent for debug console is available at "window.UIAgent"');
             }
 
+            // 確認頁面準備好後，才啟動路由導航
             await router.start();
+            
             const loadingPage = document.getElementById('sys_loading_page');
             if (loadingPage) {
                 loadingPage.classList.add('hidden');
@@ -188,8 +200,13 @@ class Runtime {
         let elapsed = 0;
 
         return new Promise((resolve, reject) => {
-            const intervalId = setInterval(() => {
+            // 立即檢查一次
+            if (this.indexPageLoaded) {
+                resolve(true);
+                return;
+            }
 
+            const intervalId = setInterval(() => {
                 if (this.indexPageLoaded) {
                     clearInterval(intervalId);
                     resolve(true);
@@ -198,7 +215,7 @@ class Runtime {
                 elapsed += checkInterval;
                 if (elapsed >= timeout) {
                     clearInterval(intervalId);
-                    resolve(false);
+                    resolve(false); // 超時
                 }
             }, checkInterval);
         });
@@ -254,9 +271,6 @@ class Runtime {
         }
     }
 
-    /**
-     * 獲取路由器實例
-     */
     getRouter() {
         return this.router;
     }

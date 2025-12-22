@@ -2,40 +2,32 @@ import { Bridge } from '../../js/bridge.js';
 
 export default class ShopPage {
     constructor() {
-        // 初始化 Bridge
-        this.bridge = new Bridge({
-            debug: console.debug,
-            info: console.info,
-            warn: console.warn,
-            error: console.error
-        });
-        
+        // 保留原先屬性
         this.serverUrl = 'http://163.18.26.227:3001'; 
-        this.dom = null; // 儲存 Shadow DOM 根節點
+        this.dom = null; 
         this.logger = console;
+        this.bridge = null;
     }
 
-    /**
-     * Component 標準初始化接口
-     * @param {Object} agentInterface - 包含 myDOM, tools, eventPlatform 等
-     */
     async init(agentInterface) {
-        // 取得 Shadow DOM (關鍵：必須透過此物件操作 HTML)
         this.dom = agentInterface.myDOM;
         this.logger = agentInterface.tools.logger || console;
+        
+        // 優先使用系統傳入的 Bridge，若無則降級建立新實例
+        this.bridge = agentInterface.bridge || new Bridge(this.logger);
 
         if (!this.dom) {
-            this.logger.error('[Shop] Error: Shadow DOM not available. Check tech.json type is "Panel".');
+            this.logger.error('[Shop] Error: DOM not available.');
             return false;
         }
 
-        // 監聽 DOM 掛載事件 (相當於 onShow)，確保每次進入頁面都重新整理
-        agentInterface.systemRadio.myDOM_onMount(() => {
-            this.logger.debug('[Shop] Page mounted, refreshing list...');
-            this.fetchAndRenderModules();
-        });
+        // 處理掛載事件
+        if (agentInterface.systemRadio && agentInterface.systemRadio.myDOM_onMount) {
+            agentInterface.systemRadio.myDOM_onMount(() => {
+                this.fetchAndRenderModules();
+            });
+        }
 
-        // 首次載入
         this.renderLoading();
         await this.fetchAndRenderModules();
         
@@ -44,12 +36,9 @@ export default class ShopPage {
 
     renderLoading() {
         if (!this.dom) return;
-        // 使用 this.dom.querySelector 搜尋 Shadow DOM 內的元素
         const container = this.dom.querySelector('#shop-container');
         if (container) {
             container.innerHTML = '<div class="shop-loading">正在載入模組商店...</div>';
-        } else {
-            this.logger.warn('[Shop] Container #shop-container not found in Shadow DOM');
         }
     }
 
@@ -57,13 +46,10 @@ export default class ShopPage {
         if (!this.dom) return;
         try {
             const apiUrl = `${this.serverUrl}/api/modules`;
-            this.logger.debug(`[Shop] Fetching modules from: ${apiUrl}`);
+            this.logger.debug(`[Shop] Fetching: ${apiUrl}`);
 
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
+            // 使用 fetch API 獲取清單
+            const response = await fetch(apiUrl);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
@@ -74,8 +60,8 @@ export default class ShopPage {
                 this.renderError(result.message || '伺服器發生錯誤');
             }
         } catch (error) {
-            this.logger.error(`[Shop] Fetch error: ${error}`);
-            this.renderError('無法連接至商店伺服器，請檢查網路設定。');
+            this.logger.error(`[Shop] Error: ${error}`);
+            this.renderError('無法連接至商店伺服器。');
         }
     }
 
@@ -89,7 +75,6 @@ export default class ShopPage {
                     <button id="retry-btn">重試</button>
                 </div>
             `;
-            // 綁定 Shadow DOM 內的按鈕
             const retryBtn = container.querySelector('#retry-btn');
             if (retryBtn) {
                 retryBtn.addEventListener('click', () => {
@@ -130,7 +115,6 @@ export default class ShopPage {
                 <button class="btn-install" data-url="${mod.downloadUrl}">下載並安裝</button>
             `;
             
-            // 直接在這裡綁定事件，避免 querySelectorAll 的複雜性
             const btn = card.querySelector('.btn-install');
             if (btn) {
                 btn.addEventListener('click', (e) => {
@@ -153,19 +137,20 @@ export default class ShopPage {
         this.bridge.showToast('開始下載模組...');
 
         try {
-            // 呼叫 Android 原生接口
-            const result = this.bridge.callSync('installModule', downloadUrl);
+            // 使用 Bridge 的異步方法呼叫原生下載與安裝邏輯
+            // 對應 AndroidBridge.kt 中的 SYS:installModule
+            const result = await this.bridge.callAsync('SYS:installModule', { url: downloadUrl }, 30000);
             
-            if (result && result.success) {
-                this.bridge.showToast('安裝成功！');
+            if (result === true) {
+                this.bridge.showToast('安裝成功！請至模組設置啟用。');
                 btnElement.innerText = '已安裝';
                 btnElement.classList.add('installed');
             } else {
-                throw new Error(result ? result.message : '未知錯誤');
+                throw new Error('安裝過程回傳失敗');
             }
         } catch (error) {
             this.logger.error(`[Shop] Install failed: ${error}`);
-            this.bridge.showToast('安裝失敗: ' + error.message);
+            this.bridge.showToast('安裝失敗: ' + (error.message || '未知錯誤'));
             btnElement.disabled = false;
             btnElement.innerText = originalText;
         }
