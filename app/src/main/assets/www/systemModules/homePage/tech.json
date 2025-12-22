@@ -4,7 +4,7 @@
 		{
 			"page": "systemPage.Home",
 			"slot": "page-header",
-			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\" id=\"calendar-btn\">日曆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"list-btn\">清單</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能3</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能4</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"setting-btn\">設定</button></nav>",
+			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\" id=\"calendar-btn\">日曆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"list-btn\">清單</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能3</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"shop-btn\">模組商店</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"setting-btn\">設定</button></nav>",
 			"handlers": [
 				{
 					"event": "click",
@@ -34,10 +34,18 @@
 						"componentName": "Calendar",
 						"methodName": "doCalendar_list"
 					}
+				},
+				{
+					"event": "click",
+					"selector": "#shop-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "system.ModuleShop.Main",
+						"options": {}
+					}
 				}
 			]
 		},
-
 		{
 			"page": "systemPage.Home",
 			"slot": "page-footer",
@@ -66,7 +74,6 @@
 				"pageID": "systemPage.Home",
 				"slot": "page-content"
 			},
-
 			"component_dependencies": []
 		}
 	],
