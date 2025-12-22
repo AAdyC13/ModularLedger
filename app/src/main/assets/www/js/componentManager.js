@@ -14,16 +14,6 @@ export class ComponentManager {
         this.componentsByMod = {};     // 輔助索引2
         this.modCounter = {}; // 計數每個模組的插件數量，目前由於是mod自定義id，所以沒有實際作用
 
-        // this.definitions = new Map();
-        // this.definitionAliases = new Map();
-        // this.templateCache = new Map();
-        // this.classRegistryByComponent = new Map();
-        // this.classRegistryByName = new Map();
-        // this.handlesById = new Map();
-        // this.singletons = new Map();
-        // this.eventHub = new EventHub();
-
-
     }
     init() {
         this.eventAgent.on("MM:Module_enabled:registerComponents", this.analysisBlueprint.bind(this));

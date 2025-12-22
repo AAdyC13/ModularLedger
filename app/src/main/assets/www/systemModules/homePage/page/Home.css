@@ -126,11 +126,15 @@
 }
 
 .record-item {
+	display: flex;
 	padding: 10px;
 	color: var(--calender-color-record-item);
 	border: 1px dashed;
 	border-radius: 10px;
 	transition: all 0.2s ease;
+}
+.record-info {
+	padding-left: 15px;
 }
 .record-item:focus {
 	border: 1px dotted var(--calender-btn-active-color);

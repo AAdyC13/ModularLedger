@@ -34,7 +34,7 @@ export class ModulesManager {
             this.logger.warn('Module loading will be restricted to whitelist only');
         }
         try {
-            await this.enableSystemModules();
+            await this.loadSystemModules();
         } catch (error) {
             this.logger.error('Error enabling system modules: ' + error);
         }
@@ -79,10 +79,7 @@ export class ModulesManager {
         return this.whitelist.includes(moduleId);
     }
 
-    /**
-     * 載入系統模組清單
-     * @returns {Array<Module>} 模組清單
-     */
+
     async loadSystemModules() {
         try {
             const list = await this.bridge.getSystemModulesList();
