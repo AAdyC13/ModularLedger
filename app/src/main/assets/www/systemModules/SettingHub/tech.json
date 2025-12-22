@@ -1,0 +1,67 @@
+{
+	"permissions": ["registerPages", "registerElements", "registerComponents"],
+	"registerPages": [
+		{
+			"pageID": "systemPage.SettingHub",
+			"html_layout": "page/SettingHub.html",
+			"css_template": "page/SettingHub.css",
+			"page_options": {
+				"allowReplaceElements": false,
+				"allowAddComponents": false,
+				"allowGlobalComponents": false
+			},
+			"registerFreeElements": [],
+			"registerFreeComponents": []
+		}
+	],
+	"registerElements": [
+		{
+			"page": "systemPage.SettingHub",
+			"selector": "#menu-container-header",
+			"replacers": [],
+			"handlers": [
+				{
+					"event": "click",
+					"selector": "#back-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "systemPage.Home",
+						"options": {}
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.SettingHub",
+			"selector": "",
+			"replacers": [],
+			"handlers": [
+				{
+					"event": "authorize",
+					"selector": "#page-content",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.SettingHub",
+						"componentName": "SettingHubView",
+						"methodName": "authorizeSettingHub_options"
+					}
+				}
+			]
+		}
+	],
+	"registerComponents": [
+		{
+			"name": "SettingHubView",
+			"type": "Logic",
+			"entry": "SettingHubView.js",
+			"html_template": "",
+			"css_template": "",
+			"panel_location": {
+				"pageID": "",
+				"selector": ""
+			},
+
+			"component_dependencies": []
+		}
+	]
+}

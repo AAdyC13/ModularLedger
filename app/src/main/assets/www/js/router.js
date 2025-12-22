@@ -7,6 +7,7 @@ export class Router {
         this.eventAgent = eventAgent;
         this.currentPage = null;
         this.pageCaches = {}; // 頁面快取
+        this.appContainer = null;
     }
 
     init() {
@@ -17,9 +18,13 @@ export class Router {
             delete this.pageCaches[PEid];
             this.logger.debug(`Page deleted from cache: [${PEid}]`);
         });
-        this.eventAgent.on('RT::Index_page_is', this.indexPageIs.bind(this));
+        this.eventAgent.on('RT:Index_page_is', this.indexPageIs.bind(this));
         this.eventAgent.on('EM:navigate', this.proxyNavigate.bind(this));
 
+        this.appContainer = document.getElementById('app');
+        if (!this.appContainer) {
+            throw new Error('App container not found for Router');
+        }
     }
     async proxyNavigate(data) {
         await this.navigate(data.pageID, data.options);
@@ -46,8 +51,8 @@ export class Router {
     async navigate(pageID, options = {}) {
         try {
             // 獲取應用容器
-            const app = document.getElementById('app');
-            if (!app) {
+
+            if (!this.appContainer) {
                 throw new Error('App container not found');
             }
 
@@ -77,7 +82,7 @@ export class Router {
             }
 
             // 4. 更新 DOM
-            app.replaceChildren(next_page);
+            this.appContainer.replaceChildren(next_page);
             this.eventAgent.emit('Router:Finish_navigate', pageID, {});
 
             // 6. 記錄當前頁面（WebView 環境不需要修改 URL）
@@ -115,11 +120,16 @@ export class Router {
     }
 
     async start() {
-        this.eventAgent.emit('Router:Starting', this.indexPage, {});
-        await this.eventAgent.callMeBack();
-
         this.logger.debug(`Starting navigation to index page: ${this.indexPage}`);
-        this.navigate(this.indexPage, {});
+        try {
+            await this.eventAgent.emit('Router:Start_indexPage', this.indexPage, {});
+        } catch (err) {
+            this.logger.error(`Start_indexPage failed: ${err}`);
+            // 警告! 明確無法加載首頁，應交回 runtime 處理
+            throw new Error(`Start_indexPage [${this.indexPage}] failed: ${err}`);
+        }
+        await this.navigate(this.indexPage, {});
+        this.appContainer.classList.remove('hidden');
     }
 
     /**

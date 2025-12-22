@@ -5,75 +5,71 @@ export default class Recorder {
         this.Agent = null;
         this.container = null;
         this.eventPlatform = null;
+        this.containerChecked = false;
+
         this.recordMain = null;
-
-        this.recordType = 0; // 0=支出, 1=收入, 2=轉帳
-
+        this.recordType = "expense";
+        this.counter = 0;
         this.recordForm = null;
         this.calculator = null; // 新增：儲存計算機實例
 
-        // 定義各模式的欄位配置
-        this.formConfigs = {
-            0: [ // 支出
-                { name: "時間", type: "datetime-local" },
-                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
-                { name: "類別", type: "text", placeholder: "選擇類別" },
-                { name: "帳戶", type: "text", placeholder: "選擇帳戶" },
-                { name: "地點", type: "text", placeholder: "輸入地點（可選）" },
-                { name: "備註", type: "text", placeholder: "新增備註（可選）" },
-                // 測試滾動用的額外欄位
-                { name: "輸入7", type: "text" },
-                { name: "輸入8", type: "text" },
-                { name: "輸入9", type: "text" },
-                { name: "輸入10", type: "text" },
-                { name: "輸入11", type: "text" },
-                { name: "輸入12", type: "text" },
-                { name: "輸入13", type: "text" },
-                { name: "輸入14", type: "text" }
-            ],
-            1: [ // 收入
-                { name: "時間", type: "datetime-local" },
-                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
-                { name: "類別", type: "text", placeholder: "選擇收入類別" },
-                { name: "帳戶", type: "text", placeholder: "選擇帳戶" },
-                { name: "地點", type: "text", placeholder: "輸入地點（可選）" },
-                { name: "備註", type: "text", placeholder: "新增備註（可選）" }
-            ],
-            2: [ // 轉帳
-                { name: "時間", type: "datetime-local" },
-                { name: "金額", type: "calculator", placeholder: "點擊輸入金額" },
-                { name: "類別", type: "text", placeholder: "轉帳類型" },
-                { name: "帳戶", type: "text", placeholder: "選擇來源帳戶" },
-                { name: "地點", type: "text", placeholder: "選擇目標帳戶" },
-                { name: "備註", type: "text", placeholder: "新增備註（可選）" }
-            ]
-        };
+        this.formConfigs = [
+            {
+                formName: "expense",
+                fields: [
+                    { name: "時間", type: "datetime-local" },
+                    { name: "金額", type: "number", placeholder: "支出金額" },
+                    { name: "類別", type: "text", placeholder: "支出類別" },
+                    { name: "帳戶", type: "text", placeholder: "支出帳戶" },
+                    { name: "地點", type: "text", placeholder: "消費地點（可選）" },
+                    { name: "備註", type: "text", placeholder: "新增備註（可選）" },
+                ]
+            },
+            {
+                formName: "income",
+                fields: [
+                    { name: "時間", type: "datetime-local" },
+                    { name: "金額", type: "number", placeholder: "收入金額" },
+                    { name: "類別", type: "text", placeholder: "收入類別" },
+                    { name: "帳戶", type: "text", placeholder: "收入帳戶" },
+                    { name: "備註", type: "text", placeholder: "新增備註（可選）" }
+                ]
+            },
+            {
+                formName: "transfer",
+                fields: [
+                    { name: "時間", type: "datetime-local" },
+                    { name: "金額", type: "number", placeholder: "轉帳金額" },
+                    { name: "類別", type: "text", placeholder: "轉帳類型" },
+                    { name: "來源帳戶", type: "text", placeholder: "來源帳戶" },
+                    { name: "目標帳戶", type: "text", placeholder: "目標帳戶" },
+                    { name: "備註", type: "text", placeholder: "新增備註（可選）" }
+                ]
+            }
+        ];
 
         // 自動生成的 ID 映射（運行時生成）
         this.fieldIdMap = {};
+    }
+
+    /**
+     * 獲取表單配置的索引
+     * @param {string} formName - 表單名稱
+     * @returns {number} 索引，-1 如果未找到
+     */
+    getFormIndex(formName) {
+        return this.formConfigs.findIndex(config => config.formName === formName);
     }
 
     async init(Agent) {
         this.Agent = Agent;
         this.logger = Agent.tools.logger;
         this.eventPlatform = Agent.eventPlatform;
-        
-        // 修正：增加 fallback，若 Agent.myDOM 為空則嘗試從 document 查找
-        this.recordMain = (Agent.myDOM || document).querySelector("#record-main");
-        
-        if (!this.recordMain) {
-            this.logger.error('Recorder container not found!');
-            return false;
-        }
-
-        // 新增：初始化計算機
-        await this.setupCalculator();
-
-        this.bindEvents(); // 綁定事件
-        await this.loadSubInterface(0); // 載入默認子介面（支出）
+        this.setOnEvents();
         this.logger.debug(`Recorder initialized`);
         return true;
     }
+
 
     /**
      * 新增：設定並載入計算機組件
@@ -97,165 +93,184 @@ export default class Recorder {
     /**
      * 綁定事件
      */
-    bindEvents() {
-        // 返回按鈕
-        const backBtn = this.recordMain.querySelector("#back-btn");
-        if (backBtn) {
-            // 注意：使用 Agent.interface 時可能需要用 this.addEventListener 包裝，但這裡直接用原生即可
-            backBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                // this.navigate('pages/home.html');
-            });
-        }
-
-        // 儲存按鈕
-        const saveBtn = this.recordMain.querySelector("#save-btn");
-        if (saveBtn) {
-            saveBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.saveRecord();
-            });
-        }
-
-        // 再記一筆按鈕
-        const addAnotherBtn = this.recordMain.querySelector("#add-another-btn");
-        if (addAnotherBtn) {
-            addAnotherBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.addAnotherRecord();
-            });
-        }
-
-        // 記錄類型按鈕
-        const typeBtns = this.recordMain.querySelectorAll('.record-type-btn');
-        typeBtns.forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const newType = parseInt(btn.dataset.type);
-                if (newType !== this.recordType) {
-                    await this.loadSubInterface(newType);
-                    this.recordType = newType;
-                    this.updateRecordTypeButtons();
-                    console.log('切換記錄類型:', this.recordType);
-                }
-            });
+    setOnEvents() {
+        this.eventPlatform.on("save-btn", () => {
+            if (!this.containerChecked) return;
+            this.saveRecord();
+        });
+        this.eventPlatform.on("add-another-btn", () => {
+            if (!this.containerChecked) return;
+            this.addAnotherRecord()
+        });
+        this.eventPlatform.on("expense-btn", () => {
+            if (!this.containerChecked) return;
+            this.recordTypeBtn("expense");
+        });
+        this.eventPlatform.on("income-btn", () => {
+            if (!this.containerChecked) return;
+            this.recordTypeBtn("income");
+        });
+        this.eventPlatform.on("transfer-btn", () => {
+            if (!this.containerChecked) return;
+            this.recordTypeBtn("transfer");
+        });
+        this.eventPlatform.on("temp-save-btn", () => {
+            if (!this.containerChecked) return;
+            this.tempSaveRecord();
         });
 
-        // 暫存按鈕
-        const tempSaveBtn = this.recordMain.querySelector('#temp-save-btn');
-        if (tempSaveBtn) {
-            tempSaveBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.tempSaveRecord();
-            });
-        }
+        this.eventPlatform.on("authorizeRecorder_view", (data) => {
+            if (!data.dom) {
+                this.logger.warn('Recorder authorize view DOM not provided');
+                return;
+            }
+            if (!this.containerChecked) {
+                this.container = data.dom;
+                this.recordMain = this.container.querySelector('#record-main');
+                this.loadSubInterface("expense"); // 載入默認子介面（支出）
+                this.containerChecked = true;
+            }
+        });
+    }
+
+    async recordTypeBtn(newType) {
+        // 由於表單按鈕禁用未實作，這邊先放保底
+        if (this.recordType === newType) return;
+        await this.loadSubInterface(newType);
+        this.updateRecordTypeButtons(this.recordType);
+        this.recordType = newType;
+        // this.logger.debug(`Record type changed to ${newType}`);
     }
 
     /**
      * 更新記錄類型按鈕狀態
      */
-    updateRecordTypeButtons() {
-        this.recordMain.querySelectorAll('.record-type-btn').forEach(btn => {
-            const btnType = parseInt(btn.dataset.type);
-            if (btnType === this.recordType) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
+    updateRecordTypeButtons(oldType) {
+        // 警告! 這邊應該透過 Agent API 由系統控制菜單按鈕狀態
     }
 
     /**
      * 載入子介面
-     * @param {number} type - 0=支出, 1=收入, 2=轉帳
      */
-    async loadSubInterface(type) {
-        if (!this.recordMain) return;
-
-        // 判斷滑動方向（根據類型順序：0=支出, 1=收入, 2=轉帳）
-        const oldType = this.recordType;
-        const slideDirection = type > oldType ? 'left' : 'right';
+    async loadSubInterface(formName) {
+        const index = this.getFormIndex(formName);
+        if (index === -1) return;
+        // 判斷滑動方向（根據 formConfigs 的 Array key 順序）
+        const oldIndex = this.getFormIndex(this.recordType);
+        const slideDirection = index > oldIndex ? 'left' : 'right';
 
         // 保存舊的表單元素
-        const oldForm = this.recordForm;
-
+        const oldFormContainer = this.recordFormContainer;
         // 重置 ID 映射
         this.fieldIdMap = {};
 
         // 根據類型生成對應的表單 HTML
-        const formHtml = this.generateFormHtml(type);
+        const formHtml = this.generateFormHtml(index);
 
         // 創建新表單容器
+        this.counter += 1;
         const newFormContainer = document.createElement('div');
-        newFormContainer.classList.add('absolute-full');
+        newFormContainer.classList.add('record-form-container');
         newFormContainer.innerHTML = `
             <div class="record-form" id="record-form">
                 ${formHtml}
             </div>`;
 
         // 確保 record-main 使用相對定位
-        this.recordMain.classList.add('relative');
+        // this.recordMain.classList.add('relative');
 
         // 如果是首次載入，直接替換內容
-        if (!oldForm) {
+        if (!oldFormContainer) {
             this.recordMain.innerHTML = '';
             this.recordMain.appendChild(newFormContainer);
             newFormContainer.classList.add('static');
 
             // 重新獲取 DOM 引用
-            this.recordForm = this.recordMain.querySelector('#record-form');
+            this.recordFormContainer = newFormContainer;
 
             // 初始化計算機
-            await this.initCalculator();
+            // await this.initCalculator();
             return;
         }
 
-        // 將舊表單設為絕對定位
-        if (oldForm) {
-            const oldContainer = document.createElement('div');
-            oldContainer.classList.add('absolute-full');
-            oldContainer.appendChild(oldForm);
-            this.recordMain.appendChild(oldContainer);
 
-            // 添加退出動畫
-            oldContainer.classList.add(`page-exit-slide-${slideDirection}`);
 
-            // 動畫結束後移除舊容器
-            setTimeout(() => {
-                if (oldContainer.parentElement) {
-                    oldContainer.remove();
-                }
-            }, 300);
+        // ---- 改為使用 track 推動 old -> new（平推效果、無重疊） ----
+        const track = document.createElement('div');
+        track.classList.add('record-track');
+
+        // 把目前的 old 從 recordMain 移到 track
+        if (oldFormContainer.parentElement === this.recordMain) {
+            this.recordMain.removeChild(oldFormContainer);
         }
 
-        // 添加新表單到容器
-        this.recordMain.appendChild(newFormContainer);
+        // 根據滑動方向決定 DOM 順序，確保動畫邏輯正確
+        if (slideDirection === 'left') {
+            // 新表單在右邊：[Old] [New]
+            track.appendChild(oldFormContainer);
+            track.appendChild(newFormContainer);
+        } else {
+            // 新表單在左邊：[New] [Old]
+            track.appendChild(newFormContainer);
+            track.appendChild(oldFormContainer);
+        }
 
-        // 添加進入動畫
-        newFormContainer.classList.add(`page-enter-slide-${slideDirection}`);
+        // 把整個 track 放回 recordMain
+        this.recordMain.innerHTML = '';
+        this.recordMain.appendChild(track);
 
-        // 動畫結束後移除動畫 class 並恢復靜態定位
+        // 強制 reflow，確保 CSS transition 可觸發
+        void track.getBoundingClientRect();
+
+        if (slideDirection === 'left') {
+            // 新表單在右邊 -> 從 0 推到 -50%（track 寬 200%，-50% 等於把畫面右移一個子項寬度）
+            track.style.transform = 'translateX(-50%)';
+        } else {
+            // 新表單在左邊 -> 從 -50% 推到 0
+            // 1. 先瞬間設定到 -50% (顯示 Old)，並暫時取消過渡效果以防閃爍
+            track.style.transition = 'none';
+            track.style.transform = 'translateX(-50%)';
+
+            // 2. 強制 reflow 讓設定生效
+            void track.getBoundingClientRect();
+
+            // 3. 恢復過渡效果並設定目標為 0 (顯示 New)
+            track.style.transition = '';
+            track.style.transform = 'translateX(0)';
+        }
+
+        // 動畫結束後清理：把 new 放回 recordMain，恢復 static，並回收 old
+        // 警告! 這種"動畫結束後再執行邏輯"的工具，應該由系統提供，目前EM已經有硬編碼此功能。
         setTimeout(() => {
-            newFormContainer.classList.remove('page-enter-slide-left', 'page-enter-slide-right');
+            // 清空 recordMain 並只放 newFormContainer（恢復正常 DOM 結構）
+            this.recordMain.innerHTML = '';
             newFormContainer.classList.add('static');
-        }, 300);
+            // 移除可能的 inline transform on new/new children
+            newFormContainer.style.transform = '';
+            this.recordMain.appendChild(newFormContainer);
 
-        // 重新獲取 DOM 引用
-        this.recordForm = newFormContainer.querySelector('.record-form');
+<<<<<<< HEAD
+=======
+            // 重新獲取 DOM 引用
+            this.recordFormContainer = newFormContainer;
+        }, 400);
+        // ---- end track 推動邏輯 ----
 
+
+>>>>>>> origin/前端設計
         // 初始化計算機（金額欄位）
-        await this.initCalculator();
+        // await this.initCalculator();
     }
 
     /**
      * 生成唯一的欄位 ID
-     * @param {number} type - 表單類型
-     * @param {number} index - 欄位索引
+     * @param {number} index - 表單索引
+     * @param {number} fieldIndex - 欄位索引
      * @param {Object} field - 欄位配置
      * @returns {string} 唯一 ID
      */
-    generateFieldId(type, index, field) {
-        const id = `field-${type}-${index}`;
+    generateFieldId(index, fieldIndex, field) {
+        const id = `field-${index}-${fieldIndex}`;
         // 記錄映射關係（欄位名稱 -> ID）
         this.fieldIdMap[field.name] = id;
         return id;
@@ -263,18 +278,20 @@ export default class Recorder {
 
     /**
      * 根據類型生成表單 HTML
-     * @param {number} type - 0=支出, 1=收入, 2=轉帳
+     * @param {number} index - 表單索引
      * @returns {string} 表單 HTML
      */
-    generateFormHtml(type) {
-        const fields = this.formConfigs[type] || this.formConfigs[0];
+    generateFormHtml(index) {
+        const config = this.formConfigs[index];
+        if (!config) return '';
+        const fields = config.fields;
 
-        return fields.map((field, index) => {
-            const fieldId = this.generateFieldId(type, index, field);
+        return fields.map((field, fieldIndex) => {
+            const fieldId = this.generateFieldId(index, fieldIndex, field);
             const inputHtml = this.generateFieldInput(field, fieldId);
             return `
                 <div class="form-group record-field">
-                    <label for="${fieldId}">${field.name}</label>
+                    <label class="form-label sys-label" for="${fieldId}">${field.name}</label>
                     ${inputHtml}
                 </div>
             `;
@@ -289,37 +306,50 @@ export default class Recorder {
      */
     generateFieldInput(field, fieldId) {
         const placeholder = field.placeholder || `請輸入${field.name}`;
+        const className = 'form-input sys-input';
 
         switch (field.type) {
             case 'calculator':
                 // Calculator 類型：readonly text input
-                return `<input type="text" id="${fieldId}" class="form-input" placeholder="${placeholder}" readonly />`;
+                return `<input type="text" id="${fieldId}" class="${className}" placeholder="${placeholder}" readonly />`;
 
             case 'datetime-local':
                 // 時間類型
-                return `<input type="datetime-local" id="${fieldId}" class="form-input" />`;
-
+                return `<input type="datetime-local" id="${fieldId}" class="${className}" />`;
+            case 'number':
+                // 時間類型
+                return `<input type="number" id="${fieldId}" class="${className}" placeholder="${placeholder}" />`;
             case 'text':
             default:
                 // 一般文字輸入
-                return `<input type="text" id="${fieldId}" class="form-input" placeholder="${placeholder}" />`;
+                return `<input type="text" id="${fieldId}" class="${className}" placeholder="${placeholder}" />`;
         }
     }
 
     /**
      * 初始化計算機 (修正版)
      */
+<<<<<<< HEAD
     async initCalculator() {
         try {
             if (!this.calculator) {
                 this.logger.warn('Calculator not ready yet');
                 return;
             }
+=======
+    // async initCalculator() {
+    //     try {
+    //         const calculator = this.getComponent('calculator');
+    //         if (!calculator) return;
+>>>>>>> origin/前端設計
 
-            // 找到當前表單中類型為 calculator 的欄位
-            const fields = this.formConfigs[this.recordType] || this.formConfigs[0];
-            const calculatorField = fields.find(field => field.type === 'calculator');
+    //         // 找到當前表單中類型為 calculator 的欄位
+    //         const index = this.getFormIndex(this.recordType);
+    //         if (index === -1) return;
+    //         const fields = this.formConfigs[index].fields;
+    //         const calculatorField = fields.find(field => field.type === 'calculator');
 
+<<<<<<< HEAD
             if (calculatorField) {
                 // 從 fieldIdMap 中查找對應的 ID
                 const fieldId = this.fieldIdMap[calculatorField.name];
@@ -332,6 +362,20 @@ export default class Recorder {
             console.error('初始化計算機失敗:', error);
         }
     }
+=======
+    //         if (calculatorField) {
+    //             // 從 fieldIdMap 中查找對應的 ID
+    //             const fieldId = this.fieldIdMap[calculatorField.name];
+    //             if (fieldId) {
+    //                 await calculator.init(fieldId);
+    //                 console.log(`✓ Calculator initialized for ${calculatorField.name} (${fieldId})`);
+    //             }
+    //         }
+    //     } catch (error) {
+    //         console.error('初始化計算機失敗:', error);
+    //     }
+    // }
+>>>>>>> origin/前端設計
 
     /**
      * 儲存記錄

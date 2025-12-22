@@ -13,20 +13,38 @@ import { PageManager } from './pageManager.js';
 import { ElementManager } from './elementManager.js';
 import { Router } from './router.js';
 import { ComponentManager } from './componentManager.js';
+import { uiManager } from './uiManager.js';
 
 class Runtime {
     constructor() {
         this.isInitialized = false;
+        this.indexPageLoaded = false;
     }
 
     /**
      * 啟動應用
      */
     async start() {
+        const loggerContainer = document.getElementById('sys_loading_page_logger');
+        if (loggerContainer) {
+            loggerManager.addLogListener((type, message) => {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = message;
+                logEntry.classList.add(`log-${type.toLowerCase()}`);
+                loggerContainer.appendChild(logEntry);
+
+                // 只保留最新的 100 條日誌
+                while (loggerContainer.children.length > 100) {
+                    loggerContainer.firstChild.remove();
+                }
+
+                loggerContainer.scrollTop = loggerContainer.scrollHeight;
+            });
+        }
         try {
 
             // --------------------------------------------
-            // 1. 基礎系統初始化 (同步)
+            // 1. 基礎系統初始化
             // --------------------------------------------
             loggerManager.setLevel(runtimeConfig.logLevel || 'DEBUG');
 
@@ -39,6 +57,11 @@ class Runtime {
             eventHub.init(new Logger('EventHub'), new Logger('EventAgent')); // 全局事件總線
             eventHub.setReady();
             this.eventAgent = eventHub.createAgent('Runtime');
+
+            uiManager.init(new Logger('UIManager'), this.eventAgent); // UI 管理器
+            this.ui = uiManager.createAgent('Runtime');
+            loggerManager.setUiAgent(uiManager.createAgent('Logger')); // 傳遞 UI 代理給 LoggerManager
+
             const bridge = new Bridge(new Logger('Bridge')); // 與原生交互橋樑
             this.logger.debug('Basic tools build successfully');
             // --------------------------------------------
@@ -57,6 +80,7 @@ class Runtime {
                 bridge,
                 eventHub.createAgent('ModulesManager'),
                 runtimeConfig.whitelist || [],
+                runtimeConfig.moduleLoadTimeout_s || 20
             );
             this.logger.debug('ModulesManager build successfully');
 
@@ -83,20 +107,28 @@ class Runtime {
             const componentManager = new ComponentManager(
                 new Logger('ComponentManager'),
                 eventHub.createAgent('ComponentManager'),
-                bridge
+                bridge,
+                uiManager.createAgent('ComponentManager')
             );
+            this.logger.debug('ComponentManager build successfully');
 
+            this.logger.debug('All system object build successfully');
             // --------------------------------------------
             // 3. 並行初始化可 async import 的管理器
             // --------------------------------------------
-            await Promise.all([
-                errorHandler.init(),
-                modulesManager.init(new Logger('Module')),
-                pageManager.init(runtimeConfig.preLoadPages || []),
-                elementManager.init(),
-                router.init(),
-                componentManager.init(),
-            ]);
+            try {
+                await Promise.all([
+                    errorHandler.init(),
+                    modulesManager.init(new Logger('Module')),
+                    pageManager.init(new Logger('Page')),
+                    elementManager.init(new Logger('Element')),
+                    router.init(),
+                    componentManager.init(),
+                ]);
+            } catch (initError) {
+                this.logger.error(`System initialization error: ${initError}`);
+                throw Error('System initialization failed');
+            }
             this.logger.debug('All System initialized');
 
 
@@ -106,9 +138,14 @@ class Runtime {
             if (!runtimeConfig.indexPage) {
                 throw new Error('indexPage is not defined in runtimeConfig');
             }
-            //this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
-            router.indexPageIs(runtimeConfig.indexPage);
 
+            // router 和 pageManager 需要知道首頁是什麼
+            await this.eventAgent.emit('RT:Index_page_is', runtimeConfig.indexPage, {});
+            this.eventAgent.on('PM:Finish_preloade_page', (PE) => {
+                if (PE.id === runtimeConfig.indexPage) {
+                    this.indexPageLoaded = true;
+                }
+            });
             await modulesManager.enableSystemModules();
 
 
@@ -118,7 +155,18 @@ class Runtime {
             // x. finished
             // --------------------------------------------
             window.errorHandler = errorHandler; // 供崩潰畫面使用
+
+            // (For Debugging) 將 UI Agent 暴露到全域
+            if (runtimeConfig.logLevel === 'debug') {
+                window.UIAgent = uiManager.createAgent('DebugConsole');
+                this.logger.info('UI Agent for debug console is available at "window.UIAgent"');
+            }
+
             await router.start();
+            const loadingPage = document.getElementById('sys_loading_page');
+            if (loadingPage) {
+                loadingPage.classList.add('hidden');
+            }
             this.isInitialized = true;
             this.logger.info('Application started successfully');
 
@@ -126,8 +174,34 @@ class Runtime {
             if (this.logger) {
                 this.logger.error(`Application startup failed: ${error}`);
             }
+            const loadingPage = document.getElementById('sys_loading_page');
+            if (loadingPage) {
+                loadingPage.classList.add('hidden');
+            }
             this.handleStartupError(error);
         }
+    }
+
+    async monitorModuleLoading(timeout_s = 20) {
+        const checkInterval = 50; // 毫秒
+        const timeout = timeout_s * 1000;
+        let elapsed = 0;
+
+        return new Promise((resolve, reject) => {
+            const intervalId = setInterval(() => {
+
+                if (this.indexPageLoaded) {
+                    clearInterval(intervalId);
+                    resolve(true);
+                }
+
+                elapsed += checkInterval;
+                if (elapsed >= timeout) {
+                    clearInterval(intervalId);
+                    resolve(false);
+                }
+            }, checkInterval);
+        });
     }
 
     /**

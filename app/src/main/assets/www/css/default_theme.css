@@ -1,0 +1,97 @@
+/* ==========================================
+   主題與可替換部分
+    -色彩定義
+    -字體大小
+    -間距
+   ========================================== */
+
+:root {
+	/* Color 主題用色 City-theme-colors */
+	--cb: #000000;
+	--c1: #bdbec1;
+	--c2: #9dc8dd;
+	--c3: #2e5773;
+	--c4: #86b792;
+	--c5: #3a8676;
+	--c6: #748f9f;
+	--c7: #e4eaed;
+	--c8: #be9c7a;
+	--c9: #71504e;
+
+	/* Border Radius 元件圓角 */
+	--sys-radius-sm: 12px;
+	--sys-radius-md: 20px;
+	--sys-radius-lg: 28px;
+	--sys-radius-full: 50%;
+
+	/* Spacing 常用間距，建議按照倍數調整以維持一致性 */
+	--sys-spacing-xs: 8px;
+	--sys-spacing-sm: 12px;
+	--sys-spacing-md: 16px;
+	--sys-spacing-lg: 24px;
+	--sys-spacing-xl: 32px;
+
+	/* 文字行高 */
+	--sys-line-height-md: 1.6;
+
+	/* ====== global.css ====== */
+	/* body */
+	--sys-body-bg: var(--c1);
+	--sys-body-color: var(--c5);
+	--sys-body-padding: 0;
+	--sys-font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+		Arial, sans-serif;
+	--sys-body-font-weight: 400;
+	/* strong */
+	--sys-strong-font-weight: 700;
+
+	/* ====== layout.css ====== */
+	/* header  */
+	--sys-header-bg: var(--c6);
+	--sys-header-color: var(--c9);
+	--sys-header-border-bottom: 5px solid var(--c8);
+	/* main */
+	--sys-main-bg: var(--c1);
+	--sys-main-color: var(--c5);
+	--sys-main-padding: var(--sys-spacing-xs);
+	/* footer */
+	--sys-footer-bg: var(--c6);
+	--sys-footer-color: var(--c9);
+	--sys-footer-border-top: 5px solid var(--c8);
+	/* loading-page */
+	--sys-loading-page-bg: var(--sys-main-bg);
+	--sys-loading-page-title1-color: var(--sys-body-color);
+	--sys-loading-page-title2-color: var(--sys-header-bg);
+	/* log */
+	--sys-logtext-info: var(--sys-main-color);
+	--sys-logtext-debug: #888;
+	--sys-logtext-warn: #ffc107;
+	--sys-logtext-error: #ff0000;
+
+	/* ====== components.css ====== */
+	/* button */
+	--sys-btn-font-size: 16px;
+	--sys-btn-color: var(--c9);
+	--sys-btn-transition: all 0.2s ease;
+	/* button:active */
+	--sys-btn-active-font-size: 12px;
+	--sys-btn-active-color: var(--c3);
+	--sys-btn-active-transform: none;
+	/* button.sys-btn-toolbar */
+	--sys-btn-toolbar-min-width: 44px;
+	--sys-btn-toolbar-min-height: 44px;
+	--sys-btn-toolbar-color: var(--sys-btn-color);
+	--sys-btn-toolbar-line-height: auto;
+	--sys-btn-toolbar-box-shadow: none;
+	/* button.sys-btn-toolbar:active */
+	--sys-btn-toolbar-active-color: var(--sys-btn-active-color);
+	--sys-btn-toolbar-active-box-shadow: none;
+
+	/* input.sys-label */
+	--sys-label-padding: 0px 5px 0px 5px;
+
+	/* input.sys-input */
+	--sys-input-bg-color: #00000010;
+	--sys-input-padding: 0px 10px 0px 10px;
+	--sys-input-border-radius: 5px;
+}

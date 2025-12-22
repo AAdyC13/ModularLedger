@@ -1,19 +1,146 @@
 {
-	"permissions": ["readState", "writeState", "localStorage"],
-	"blueprints": [],
-	"components": [
+	"permissions": ["registerPages", "registerElements", "registerComponents"],
+	"registerPages": [
 		{
-			"name": "Recorder",
-			"type": "Panel",
-			"entry": "Recorder.js",
-			"html_template": "Recorder.html",
-			"css_template": "Recorder.css",
-			"panel_location": {
-				"pageID": "systemPage.Recorder",
-				"slot": "page-content"
+			"pageID": "systemPage.Recorder",
+			"html_layout": "page/Recorder.html",
+			"css_template": "page/Recorder.css",
+			"page_options": {
+				"allowReplaceElements": true,
+				"allowAddComponents": true,
+				"allowGlobalComponents": true
 			},
-			"component_dependencies": []
+			"registerFreeElements": [
+				{
+					"selector": "#id",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				}
+			],
+			"registerFreeComponents": [
+				{
+					"selector": "#id",
+					"options": {}
+				}
+			]
 		}
 	],
-	"module_dependencies": []
+	"registerElements": [
+		{
+			"page": "systemPage.Recorder",
+			"selector": "#recorder-header-menu",
+			"replacers": [],
+			"handlers": [
+				{
+					"event": "click",
+					"selector": "#back-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "systemPage.Home",
+						"options": {}
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#expense-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "expense-btn"
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#income-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "income-btn"
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#transfer-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "transfer-btn"
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#temp-save-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "temp-save-btn"
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.Recorder",
+			"selector": "",
+			"replacers": [],
+			"handlers": [
+				{
+					"event": "authorize",
+					"selector": "#page-content",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "authorizeRecorder_view"
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.Recorder",
+			"selector": "#recorder-footer-menu",
+			"replacers": [],
+			"handlers": [
+				{
+					"event": "click",
+					"selector": "#save-btn",
+					"action": "navigate",
+					"parameters": {
+						"pageID": "systemPage.Home",
+						"options": {}
+					}
+				},
+				{
+					"event": "click",
+					"selector": "#add-another-btn",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Recorder",
+						"componentName": "Recorder",
+						"methodName": "add-another-btn"
+					}
+				}
+			]
+		}
+	],
+	"registerComponents": [
+		{
+			"name": "Recorder",
+			"type": "Logic",
+			"entry": "Recorder.js",
+			"html_template": "",
+			"css_template": "",
+			"panel_location": {
+				"pageID": "",
+				"selector": ""
+			},
+
+			"component_dependencies": []
+		}
+	]
 }

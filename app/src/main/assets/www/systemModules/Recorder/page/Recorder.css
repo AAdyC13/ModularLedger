@@ -1,0 +1,64 @@
+.static {
+	position: static;
+}
+
+.record-main {
+	min-height: 100%;
+	min-width: 100%;
+	overflow: hidden;
+	position: relative;
+
+	/* ===== Recorder Variables ===== */
+	--recorder-animation-duration: 0.4s;
+	--recorder-color-border-bottom: var(--c6);
+	--recorder-border-bottom: 2px dashed var(--recorder-color-border-bottom);
+	--recorder-padding-field-top: 2px;
+	--recorder-form-font-size: 18px;
+}
+
+/* 純粹服務於動畫效果 */
+.record-track {
+	display: flex;
+	width: 200%;
+	height: 100%;
+	transition: transform var(--recorder-animation-duration) ease;
+	will-change: transform;
+	/* track 預設不被 pointer 影響 */
+	pointer-events: none;
+}
+.record-form-container {
+	width: 100%;
+	height: 100%;
+	/* 入口由 track 控制寬度/排列，個別 container 以 flex-basis 50% 呈現（配合 track 寬度 200%） */
+	flex: 0 0 50%;
+	box-sizing: border-box;
+	display: flex;
+}
+
+.record-form {
+	flex: 1 0 auto;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+	min-height: 0;
+	overflow: auto;
+	font-size: var(--recorder-form-font-size);
+}
+
+.form-group.record-field {
+	flex: 0 0 50px;
+	display: flex;
+	flex-direction: row;
+	justify-content: flex-start;
+	align-items: stretch;
+	border-bottom: var(--recorder-border-bottom);
+}
+
+/* label.form-label {
+} */
+input.form-input {
+	margin-top: 3px;
+	margin-bottom: 3px;
+	margin-right: 3px;
+}

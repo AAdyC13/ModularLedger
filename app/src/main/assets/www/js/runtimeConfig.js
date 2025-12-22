@@ -9,32 +9,10 @@ const runtimeConfig = {
      * 當 schema 載入失敗時,只允許載入白名單中的模組
      */
     whitelist: [
-        'system.HomePage',
-        'system.Recorder',
-        'system.ModuleShop'
-    ],
-    layoutIDs: {
-        'tcb': 'tcb-layout',
-        'bottom-nav': 'bottom-nav-layout',
-        'drawer': 'drawer-layout',
-        'tabs': 'tab-layout',
-        'full': 'fullscreen-layout',
-        'search': 'search-layout',
-        'master-detail': 'master-detail-layout',
-        'wizard': 'wizard-layout'
-    },
-    preLoadPages: [
-        { pageID: 'systemPage.Home', layoutID: 'tcb' },
-        { pageID: 'systemPage.Recorder', layoutID: 'full' },
-        { pageID: 'systemPage.Settings', layoutID: 'full' },
-        { pageID: 'systemPage.Accounts', layoutID: 'tabs' },
-        { pageID: 'systemPage.Searcher', layoutID: 'search' },
-        { pageID: 'system.ModuleShop.Main', layoutID: 'full' }
+        'systemModule.Home',
+        'systemModule.Recorder'
     ],
     indexPage: 'systemPage.Home',
-
-
-
 
     /**
      * 日誌等級
@@ -45,7 +23,17 @@ const runtimeConfig = {
     /**
      * 應用版本
      */
-    version: '0.1.0'
+    version: '0.1.0',
+
+    /**
+     * 運行時超時設置 (秒)
+     */
+    runtimeTimeout_s: 30,
+
+    /**
+     * 模組加載超時設置 (秒)
+     */
+    moduleLoadTimeout_s: 5,
 };
 
 export default runtimeConfig;

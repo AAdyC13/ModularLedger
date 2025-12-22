@@ -2,10 +2,11 @@ const GLOBAL_OBJECT = typeof globalThis !== 'undefined' ? globalThis : window;
 import { Logger } from './logger.js';
 
 export class ComponentManager {
-    constructor(logger, eventAgent, bridge) {
+    constructor(logger, eventAgent, bridge, uiAgent) {
         this.logger = logger;
         this.eventAgent = eventAgent;
         this.bridge = bridge;
+        this.ui = uiAgent;
         this.components = {};
         this.eventPlatform = new EventPlatform();
 
@@ -25,9 +26,25 @@ export class ComponentManager {
 
     }
     init() {
-        this.eventAgent.on("MM:Module_enabled", this.analysisBlueprint.bind(this));
+        this.eventAgent.on("MM:Module_enabled:registerComponents", this.analysisBlueprint.bind(this));
         this.eventAgent.on("PM:Finish_create_page", this.putDOMToPE.bind(this));
         this.eventAgent.on("EM:call_component_method", this.handleComponentMethodCall.bind(this));
+        this.eventAgent.on("EM:authorize_element", this.authorize_element.bind(this));
+    }
+    async authorize_element(data) {
+        const moduleID = data.moduleID;
+        const componentName = data.componentName;
+        const methodName = data.methodName;
+        const dom = data.dom;
+        const componentID = `${moduleID}.${componentName}`;
+        const component = this.components[componentID];
+        if (!component) {
+            this.logger.error(`Component [${componentID}] does not exist for authorization`);
+            return;
+        }
+        const eventName = `Component:${componentID}:${methodName}`;
+        this.logger.debug(`Emitting event [${eventName}] for Component authorization`);
+        await this.eventPlatform.emit(eventName, { dom: dom });
     }
     async handleComponentMethodCall(data) {
         const moduleID = data.moduleID;
@@ -40,17 +57,15 @@ export class ComponentManager {
             return;
         }
         const eventName = `Component:${componentID}:${methodName}`;
-        this.logger.debug(`Emitting event [${eventName}] for Component method call`);
+        // this.logger.debug(`Emitting event [${eventName}] for Component method call`);
         await this.eventPlatform.emit(eventName, {});
     }
     async analysisBlueprint(data) {
         const modID = data.id;
-        const tech = data.tech;
+        const registerComponents = data.tech;
         const folderName = data.folderName;
         try {
-            const comp = tech.components || [];
-
-            for (const cp of comp) {
+            for (const cp of registerComponents) {
                 await this.createComponent(modID, cp, folderName);
             }
             this.eventAgent.emit('CM:analysis_complete', { sysName: "ComponentManager", modID: modID }, {});
@@ -62,29 +77,31 @@ export class ComponentManager {
         let compCount = 0;
         this.componentsByPage[PageElement.id]?.forEach(async (compID) => {
             const comp = this.components[compID];
-
+            const slotName = comp.panel_location.selector;
             // this.logger.debug(`PageElement [${PageElement.getRoot().outerHTML}] slotID [${PageElement.getRoot().querySelector("div.page-header")?.outerHTML}]`);
             try {
-                const slot = PageElement.getRoot().querySelector(`.${comp.panel_location.slot}`);
+                const slot = PageElement.getRoot().querySelector(`${slotName}`);
                 if (!slot) {
-                    this.logger.warn(`Slot [${comp.panel_location.slot}] not found in Page [${PageElement.id}] for Component [${comp.id}]`);
+                    this.logger.warn(`Slot [${slotName}] not found in Page [${PageElement.id}] for Component [${comp.id}]`);
                     return;
                 }
                 if (comp.type === "Panel") {
-                    // this.logger.debug(`Putting component [${comp.id}] to page [${PageElement.id}] at slot [${comp.panel_location.slot}], DOM: ${comp.dom}`);
+                    // this.logger.debug(`Putting component [${comp.id}] to page [${PageElement.id}] at slot [${comp.panel_location.selector}], DOM: ${comp.dom}`);
                     if (!comp.dom) {
                         this.logger.warn(`Component [${comp.id}] of type Panel has no DOM to append in Page [${PageElement.id}]`);
                         return;
                     }
                     slot.appendChild(comp.dom);
                     compCount++;
-                    this.logger.debug(`Appended Component [${comp.id}] DOM to Page [${PageElement.id}] Slot [${comp.panel_location.slot}]`);
+                    this.logger.debug(`Appended Component [${comp.id}] DOM to Page [${PageElement.id}] Slot [${slotName}]`);
                 }
 
             } catch (error) {
-                this.logger.error(`Failed to append Component [${comp.id}] DOM to Page [${PageElement.id}] Slot [${comp.panel_location.slot}]: ${error.message}`);
+                this.logger.error(`Failed to append Component [${comp.id}] DOM to Page [${PageElement.id}] Slot [${slotName}]: ${error.message}`);
+                return;
             }
             try {
+                this.logger.debug(`Initializing Component [${comp.id}]`);
                 const result = await comp.init();
                 if (result === false) {
                     // 警告! module component 回報初始化失敗，應該要有後續取消此 component 在page上的機制
@@ -118,21 +135,16 @@ export class ComponentManager {
             let html = "";
             let css_path = "";
             if (compTech.html_template) {
-                try {
-                    const response = await fetch(`https://appassets.androidplatform.net/assets/www/systemModules/${folderName}/${compTech.html_template}`);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    html = await response.text();
-                } catch (error) {
-                    this.logger.error(`Failed to fetch HTML template for component [${id}]: ${error.message}`);
+                html = await this.bridge.fetchSystemModules(`${folderName}/${compTech.html_template}`, "text");
+                if (!html) {
+                    this.logger.error(`Failed to fetch HTML template for component [${id}]`);
                     html = '<div>Error loading HTML</div>'; // 保底 HTML
                 }
             } else {
                 this.logger.warn(`Component [${id}] has no HTML template defined.`);
             }
             if (compTech.css_template) {
-                css_path = `https://appassets.androidplatform.net/assets/www/systemModules/${folderName}/${compTech.css_template}`;
+                css_path = `${this.bridge.virtual_domain}/assets/www/systemModules/${folderName}/${compTech.css_template}`;
             }
             try {
                 dom = this.createDOM(id, html, css_path);
@@ -160,6 +172,10 @@ export class ComponentManager {
         if (dom) {
             this.componentsByPage[compTech.panel_location.pageID] ??= new Set();
             this.componentsByPage[compTech.panel_location.pageID].add(id);
+        }
+        if (type === "Logic") {
+            // Logic type 不需要 DOM，直接初始化
+            await this.components[id].init();
         }
         this.componentsByMod[modID] ??= new Set();
         this.componentsByMod[modID].add(id);
@@ -201,7 +217,6 @@ export class ComponentManager {
 
         // shadow root
         const shadow = host.attachShadow({ mode: 'open' });
-        //css_path = `https://appassets.androidplatform.net/assets/www/systemModules/${folderName}/${compTech.css_template}`;
         if (css_path) {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
@@ -257,6 +272,8 @@ class ComponentAgent {
     }
     async init() {
         this.eventPlatform.on(`Component:${this.id}:onDestroy`, this.ondestroy.bind(this));
+
+        this.logger.debug(`Initializing Component [${this.id}]`);
 
         let myDOM = null;
         if (this.dom) {

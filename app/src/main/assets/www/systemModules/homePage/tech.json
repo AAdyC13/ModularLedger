@@ -1,17 +1,90 @@
 {
-	"permissions": ["readState", "writeState", "localStorage"],
-	"blueprints": [
+	"permissions": ["registerPages", "registerElements", "registerComponents"],
+	"registerPages": [
+		{
+			"pageID": "systemPage.Home",
+			"html_layout": "page/Home.html",
+			"css_template": "page/Home.css",
+			"page_options": {
+				"allowReplaceElements": true,
+				"allowAddComponents": true,
+				"allowGlobalComponents": true
+			},
+			"registerFreeElements": [
+				{
+					"selector": "#free-btn-1",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				},
+				{
+					"selector": "#free-btn-2",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				},
+				{
+					"selector": "#free-btn-3",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				},
+				{
+					"selector": "#free-btn-4",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				},
+				{
+					"selector": "#free-btn-5",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				},
+				{
+					"selector": "#free-btn-6",
+					"options": {
+						"changeInnerTEXT": true,
+						"changeID": true
+					}
+				}
+			],
+			"registerFreeComponents": [
+				{
+					"selector": "#page-content",
+					"options": {}
+				}
+			]
+		}
+	],
+	"registerElements": [
 		{
 			"page": "systemPage.Home",
+<<<<<<< HEAD
 			"slot": "page-header",
 			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\" id=\"calendar-btn\">日曆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"list-btn\">清單</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">功能3</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"shop-btn\">模組商店</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"setting-btn\">設定</button></nav>",
+=======
+			"selector": "#menu-container-header",
+			"replacers": [
+				{
+					"selector": "#free-btn-1",
+					"changeInnerTEXT": "example",
+					"changeID": "example_btn_on_HomePage"
+				}
+			],
+>>>>>>> origin/前端設計
 			"handlers": [
 				{
 					"event": "click",
 					"selector": "#setting-btn",
 					"action": "navigate",
 					"parameters": {
-						"pageID": "systemPage.Settings",
+						"pageID": "systemPage.SettingHub",
 						"options": {}
 					}
 				},
@@ -20,7 +93,7 @@
 					"selector": "#calendar-btn",
 					"action": "callComponentMethod",
 					"parameters": {
-						"moduleID": "system.HomePage",
+						"moduleID": "systemModule.Home",
 						"componentName": "Calendar",
 						"methodName": "doCalendar_calendar"
 					}
@@ -30,7 +103,7 @@
 					"selector": "#list-btn",
 					"action": "callComponentMethod",
 					"parameters": {
-						"moduleID": "system.HomePage",
+						"moduleID": "systemModule.Home",
 						"componentName": "Calendar",
 						"methodName": "doCalendar_list"
 					}
@@ -48,8 +121,23 @@
 		},
 		{
 			"page": "systemPage.Home",
-			"slot": "page-footer",
-			"html": "<nav class=\"menu-container\"><button class=\"menu-btn\">選項1</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項2</button><div class=\"menu-divider\"></div><button class=\"menu-btn\" id=\"new-record-btn\">記一筆</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項4</button><div class=\"menu-divider\"></div><button class=\"menu-btn\">選項5</button></nav>",
+			"selector": "#page-content",
+			"handlers": [
+				{
+					"event": "authorize",
+					"selector": "#home-calendar-view",
+					"action": "callComponentMethod",
+					"parameters": {
+						"moduleID": "systemModule.Home",
+						"componentName": "Calendar",
+						"methodName": "authorizeCalendar_view"
+					}
+				}
+			]
+		},
+		{
+			"page": "systemPage.Home",
+			"selector": "#menu-container-footer",
 			"handlers": [
 				{
 					"event": "click",
@@ -63,19 +151,24 @@
 			]
 		}
 	],
-	"components": [
+	"registerComponents": [
 		{
 			"name": "Calendar",
-			"type": "Panel",
-			"entry": "RecordCalendar\\RecordCalendar.js",
-			"html_template": "RecordCalendar\\RecordCalendar.html",
-			"css_template": "RecordCalendar\\RecordCalendar.css",
+			"type": "Logic",
+			"entry": "RecordCalendar.js",
+			"html_template": "",
+			"css_template": "",
 			"panel_location": {
-				"pageID": "systemPage.Home",
-				"slot": "page-content"
+				"pageID": "",
+				"selector": ""
 			},
 			"component_dependencies": []
 		}
+<<<<<<< HEAD
 	],
 	"module_dependencies": []
 }
+=======
+	]
+}
+>>>>>>> origin/前端設計
