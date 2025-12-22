@@ -20,12 +20,12 @@ class LoggerManager {
     output(type, moduleName, ...args) {
         // 1. Normal console log, with multi-argument support
         const consoleLogMethod = {
-            'DEBUG': console.info,
-            'INFO': console.info,
-            'WARN': console.info,
-            'ERROR': console.info,
-            'DEBUG_AUTO': console.info
-        }[type] || console.info;
+            'DEBUG': console.debug,
+            'INFO': console.log,
+            'WARN': console.warn,
+            'ERROR': console.error,
+            'DEBUG_AUTO': console.debug
+        }[type] || console.log;
         consoleLogMethod(`[${moduleName}]`, ...args);
 
         // 2. Forward formatted log to in-app listeners
@@ -61,8 +61,9 @@ class LoggerManager {
      */
     setLevel(level) {
         const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
-        if (levels.includes(level)) {
-            this.level = level;
+        const upperCaseLevel = level.toUpperCase();
+        if (levels.includes(upperCaseLevel)) {
+            this.level = upperCaseLevel;
         }
     }
 

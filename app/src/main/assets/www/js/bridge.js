@@ -1,226 +1,171 @@
 /**
- * Android Bridge - WebView 統一的接口與 Android 原生層交互
+ * Android Bridge - 混合式架構通訊層
+ * 包含：
+ * 1. 同步調用 (Legacy/Fast operations)
+ * 2. 異步任務匯流排 (Database/Heavy operations)
  */
+
+// 全域接收器，供 Android 原生層調用
+window.BridgeMessenger = {
+    onNativeMessage: function (response) {
+        // 這是空函數，Bridge 實例化時會接管此函數
+        console.warn('BridgeMessenger not initialized yet.');
+    }
+};
+
 export class Bridge {
     constructor(logger) {
         this.isAndroid = this.detectAndroid();
         this.logger = logger;
         this.virtual_domain = "https://appassets.androidplatform.net";
+
+        // --- 異步任務系統 ---
+        this.pendingTasks = new Map(); // { taskId: { resolve, reject, timer } }
+        this.setupMessenger();
+
         if (!this.isAndroid) {
             this.logger.warn('Not in Android environment, Android methods will return null');
         }
     }
 
     detectAndroid() {
-        return typeof window.AndroidBridge !== 'undefined'; // 檢測是否在 Android WebView 環境中
+        return typeof window.AndroidBridge !== 'undefined';
+    }
+
+    setupMessenger() {
+        // 接管全域接收器
+        window.BridgeMessenger.onNativeMessage = (response) => {
+            this.handleNativeMessage(response);
+        };
     }
 
     /**
-     * 調用 Android 原生方法（同步）
-     * @param {string} method - 方法名
-     * @param {...any} args - 參數（自動處理編解碼）
-     * @returns {any} - 返回結果（自動解碼）
+     * 處理來自 Android 的異步回調
+     * @param {Object} response - { taskId, status, data, error }
      */
-    callSync(method, ...args) {
-        if (!this.isAndroid) {
-            this.logger.warn(`Not in Android environment, now method: ${method}`);
-            return null;
+    handleNativeMessage(response) {
+        const { taskId, status, data, error } = response;
+
+        if (!this.pendingTasks.has(taskId)) {
+            this.logger.warn(`Received message for unknown task: ${taskId}`);
+            return;
         }
 
-        try {
-            const fn = window.AndroidBridge[method];
-            if (typeof fn === 'function') {
+        const task = this.pendingTasks.get(taskId);
 
-                // 自動編碼複雜類型參數
-                const encodedArgs = args.map(arg => {
-                    if (arg !== null && typeof arg === 'object') {
-                        return this.encodeRequest(arg);
-                    }
-                    return arg;
-                });
-                const result = window.AndroidBridge[method](...encodedArgs);
-                //  this.logger.debug(`Called Android method: ${method} with args: ${JSON.stringify(args)},\n value: ${result}`);
-                // 自動解碼複雜類型返回值
-                if (typeof result === 'string') {
-                    try {
-                        const decoded = this.decodeResponse(result);
-                        return decoded !== null ? decoded : result;
-                    } catch {
-                        return result;
-                    }
-                }
-                return result;
-            } else {
-                this.logger.error(`Method ${method} not found in AndroidBridge`);
-                return null;
-            }
-        } catch (error) {
-            this.logger.error(`Error calling ${method}:` + error);
-            return null;
+        // 清除超時計時器
+        clearTimeout(task.timer);
+        this.pendingTasks.delete(taskId);
+
+        if (status === 'SUCCESS') {
+            this.logger.debug(`Task ${taskId} completed successfully, data: ${JSON.stringify(data)}`);
+            task.resolve(data);
+        } else {
+
+            const errorMsg = error ? `Code: ${error.code}, Msg: ${error.message}` : 'Unknown Error';
+            this.logger.error(`Task ${taskId} failed: ${errorMsg}`);
+            task.reject(new Error(errorMsg));
         }
     }
+
+    /**
+     * 調用 Android 異步任務 (推薦用於 DB 和耗時操作)
+     * @param {string} action - 路由指令 (例如 'DB:queryExpenses')
+     * @param {Object} payload - 參數物件
+     * @param {number} timeoutMs - 超時設定 (預設 10000ms)
+     * @returns {Promise<any>}
+     */
+    async callAsync(action, payload = {}, timeoutMs = 10000) {
+        if (!this.isAndroid) {
+            this.logger.warn(`Mocking Async Call: ${action}`);
+            return Promise.resolve(null);
+        }
+
+        const taskId = this.generateUUID();
+
+        return new Promise((resolve, reject) => {
+            // 設定超時
+            const timer = setTimeout(() => {
+                if (this.pendingTasks.has(taskId)) {
+                    this.pendingTasks.delete(taskId);
+                    reject(new Error(`Task ${taskId} timed out after ${timeoutMs}ms`));
+                }
+            }, timeoutMs);
+
+            // 掛起任務
+            this.logger.debug(`Calling Async Action: ${action},payload: ${JSON.stringify(payload)}, Task ID: ${taskId}`);
+            this.pendingTasks.set(taskId, { resolve, reject, timer });
+
+            // 發送請求
+            const message = JSON.stringify({
+                taskId: taskId,
+                action: action,
+                payload: payload
+            });
+
+            try {
+                window.AndroidBridge.postMessage(message);
+            } catch (err) {
+                clearTimeout(timer);
+                this.pendingTasks.delete(taskId);
+                reject(err);
+            }
+        });
+    }
+
+    generateUUID() {
+        if (crypto && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    // =================================================================================
+    // API Methods (All async)
+    // =================================================================================
+
+    // 常用異步封裝
+    getDeviceInfo() { return this.callAsync('SYS:getDeviceInfo'); }
+    getAppVersion() { return this.callAsync('SYS:getAppVersion'); }
+    checkNetworkStatus() { return this.callAsync('SYS:checkNetworkStatus'); }
+    openSettings() { return this.callAsync('SYS:openSettings'); }
+    share(text, title = '分享') { return this.callAsync('SYS:share', { text, title }); }
+    requestPermission(permission) { return this.callAsync('SYS:requestPermission', { permission }); }
+    syncThemeColor(color) { return this.callAsync('SYS:syncThemeColor', { color }); }
+
+    // 模組相關
+    getSystemModulesList() { return this.callAsync('SYS:getSystemModulesList'); }
+    getSchema(name) { return this.callAsync('SYS:getSchema', { name }); }
+    getTechs(fileNames) { return this.callAsync('SYS:getTechs', { fileNames }); }
+
+
+    // =================================================================================
+    // Fetcher (用於獲取本地資源)
+    // =================================================================================
 
     async fetchSystemModules(path, resultType = 'text') {
         const url = `${this.virtual_domain}/assets/www/systemModules/${path}`;
         try {
             const response = await fetch(url);
-            if (!response.ok) {
-                this.logger.error(`Failed to fetch system module from ${url}`);
-                return null;
-            }
-            const data = await response[resultType]();
-            return data;
+            if (!response.ok) return null;
+            return await response[resultType]();
         } catch (error) {
             this.logger.error(`Error fetching system module from ${url}: ${error}`);
             return null;
         }
     }
+
     async fetch(url) {
         try {
             const response = await fetch(url);
-            if (!response.ok) {
-                this.logger.error(`Failed to fetch from ${url}`);
-                return null;
-            }
+            if (!response.ok) return null;
             return response;
-        }
-        catch (error) {
+        } catch (error) {
             this.logger.error(`Error fetching from ${url}: ${error}`);
             return null;
         }
     }
-
-    /**
-     * 顯示 Toast 消息
-     * @param {string} message - 消息內容
-     */
-    showToast(message) {
-        return this.callSync('showToast', message);
-    }
-
-    /**
-     * 獲取設備信息
-     * @returns {object|null} - 設備信息對象
-     */
-    getDeviceInfo() {
-        return this.callSync('getDeviceInfo');
-    }
-
-    /**
-     * 保存數據到本地存儲
-     * @param {string} key - 鍵
-     * @param {any} value - 值
-     */
-    saveData(key, value) {
-        return this.callSync('saveData', key, value);
-    }
-
-    /**
-     * 從本地存儲讀取數據
-     * @param {string} key - 鍵
-     * @returns {any|null} - 讀取的數據
-     */
-    loadData(key) {
-        return this.callSync('loadData', key);
-    }
-
-    /**
-     * 請求權限
-     * @param {string} permission - 權限名稱
-     */
-    requestPermission(permission) {
-        return this.callSync('requestPermission', permission);
-    }
-
-    /**
-     * 打開系統設置
-     */
-    openSettings() {
-        return this.callSync('openSettings');
-    }
-
-    /**
-     * 分享內容
-     * @param {string} text - 分享文本
-     * @param {string} title - 分享標題
-     */
-    share(text, title = '分享') {
-        return this.callSync('share', text, title);
-    }
-
-    /**
-     * 獲取應用版本
-     * @returns {string|null} - 版本號
-     */
-    getAppVersion() {
-        return this.callSync('getAppVersion');
-    }
-
-    /**
-     * 檢查網絡狀態
-     * @returns {boolean|null} - 是否有網絡連接
-     */
-    checkNetworkStatus() {
-        return this.callSync('checkNetworkStatus');
-    }
-
-    // /**
-    //  * 打開外部瀏覽器
-    //  * @param {string} url - URL
-    //  */
-    // openExternalBrowser(url) {
-    //     return this.callSync('openExternalBrowser', url);
-    // }
-
-    exitApp() {
-        this.logger.info('Exiting application');
-        return this.callSync('exitApp');
-    }
-
-    /**
-     * JSON 編碼器：將複雜資料包裝為 JSON 字串
-     * 只用於 Object/Array 等複雜類型，基本類型 (string/number/boolean) 不需使用
-     * @param {Object|Array} content - 要包裝的複雜內容
-     * @returns {string} - 格式化的 JSON 字串: {"type":"類型", "content":內容}
-     */
-    encodeRequest(content) {
-        let type;
-
-        if (Array.isArray(content)) {
-            type = 'Array';
-        } else if (typeof content === 'object' && content !== null) {
-            type = 'Object';
-        } else {
-            throw new Error('encodeRequest only for complex types (Object/Array). Use direct parameter for primitives.');
-        }
-
-        return JSON.stringify({
-            type: type,
-            content: content
-        });
-    }
-
-    /**
-     * JSON 解碼器：解析後端返回的複雜資料
-     * @param {string} responseString - 後端返回的 JSON 字串
-     * @returns {any|null} - 解析後的 content，若失敗返回 null
-     */
-    decodeResponse(responseString) {
-        if (!responseString) {
-            return null;
-        }
-
-        try {
-            const response = JSON.parse(responseString);
-            if (response && typeof response === 'object' && 'type' in response && 'content' in response) {
-                return response.content;
-            }
-            this.logger.warn('Invalid response format:' + response);
-            return null;
-        } catch (error) {
-            this.logger.error('Error decoding response:' + error);
-            return null;
-        }
-    }
 }
-

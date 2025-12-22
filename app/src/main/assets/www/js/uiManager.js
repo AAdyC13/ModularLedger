@@ -1,27 +1,27 @@
-import { Logger } from './logger.js';
-
 let uiManagerInstance = null;
 
-class UIManager {
+export default class UIManager {
     constructor() {
+        this.logger = null;
+        this.eventHub = null;
+        this.toastContainer = null;
         if (uiManagerInstance) {
             return uiManagerInstance;
         }
-        this.isInitialized = false;
         uiManagerInstance = this;
+        this.isInitialized = false;
     }
 
     init(logger, eventHub) {
-        this.logger = logger || new Logger('UIManager');
+        this.logger = logger;
         this.eventHub = eventHub;
 
         // 建立 Toast 容器
         this.toastContainer = document.createElement('div');
         this.toastContainer.className = 'sys-toast-container';
         document.body.appendChild(this.toastContainer);
-
         this.isInitialized = true;
-        this.logger.info('UIManager initialized');
+        this.logger.debug('UIManager initialized');
     }
 
     createAgent(moduleName) {
@@ -196,10 +196,13 @@ export class UIAgent {
      * 顯示一個警告/確認提示框
      * @param {string} name - 標題
      * @param {string} msg - 訊息內容
-     * @param {object} [config={}] - 設定 { buttonText }
+     * @param {string} [buttonText='確認'] - 按鈕上顯示的文字
      * @returns {Promise<boolean>} - 使用者點擊按鈕後解析
      */
-    alert(name, msg, config = {}) {
+    alert(name, msg, buttonText) {
+        const config = {
+            buttonText: buttonText || '確認'
+        };
         return this.manager.showModal({ name, msg, type: 'alert', config }, this.moduleName);
     }
 
@@ -207,10 +210,17 @@ export class UIAgent {
      * 顯示一個帶有輸入框的提示框
      * @param {string} name - 標題
      * @param {string} msg - 訊息內容
-     * @param {object} [config={}] - 設定 { placeholder, okText, cancelText }
+     * @param {string} [placeholder=''] - 輸入框的預留位置文字
+     * @param {string} [okText='確認'] - 確認按鈕的文字
+     * @param {string} [cancelText='取消'] - 取消按鈕的文字
      * @returns {Promise<string|null>} - 使用者確認後解析為輸入的文字，取消則為 null
      */
-    prompt(name, msg, config = {}) {
+    prompt(name, msg, placeholder, okText, cancelText) {
+        const config = {
+            placeholder: placeholder || '',
+            okText: okText || '確認',
+            cancelText: cancelText || '取消',
+        }
         return this.manager.showModal({ name, msg, type: 'prompt', config }, this.moduleName);
     }
 
@@ -218,10 +228,13 @@ export class UIAgent {
      * 顯示一個等待提示框
      * @param {string} name - 標題
      * @param {string} msg - 訊息內容
-     * @param {object} [config={}] - 設定 { timeout }
+     * @param {number} [timeout=3] - 最長等待時間（秒），時間到將自動關閉
      * @returns {{close: function}} - 一個包含 close 方法的物件，用於手動關閉提示框
      */
-    wait(name, msg, config = {}) {
+    wait(name, msg, timeout = 3) {
+        const config = {
+            timeout: timeout * 1000
+        };
         return this.manager.showModal({ name, msg, type: 'wait', config }, this.moduleName);
     }
 }

@@ -139,77 +139,40 @@ export class ErrorHandler {
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
             ">
-                <div style="
-                    background: rgba(255, 255, 255, 0.1);
-                    backdrop-filter: blur(10px);
-                    border-radius: 20px;
-                    padding: 2rem;
-                    max-width: 500px;
-                    width: 100%;
-                ">
+                <div>
                     <h1 style="margin: 0 0 1rem 0; font-size: 2rem;">⚠️ 系統崩潰</h1>
                     <p style="margin: 0 0 1.5rem 0; opacity: 0.9;">
                         應用程式遇到了嚴重錯誤,已自動啟用保護模式
                     </p>
                     
-                    <div style="
-                        background: rgba(0, 0, 0, 0.2);
-                        border-radius: 12px;
-                        padding: 1rem;
-                        margin-bottom: 1.5rem;
-                        text-align: left;
-                        font-size: 0.9rem;
-                    ">
-                        <div style="margin-bottom: 0.5rem;">
+                    <div>
+                        <div >
                             <strong>錯誤統計:</strong> ${errorSummary.totalErrors} 個錯誤
                         </div>
-                        <div style="margin-bottom: 0.5rem;">
+                        <div ">
                             <strong>最近錯誤:</strong> ${errorSummary.recentErrors} 個 (${this.crashTimeWindow / 1000}秒內)
                         </div>
-                        <div style="
-                            max-height: 100px;
-                            overflow-y: auto;
-                            font-family: monospace;
-                            font-size: 0.8rem;
-                            opacity: 0.8;
-                        ">
+                        <div>
                             ${errorSummary.lastError}
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <div>
                         <button 
                             onclick="errorHandler.reloadApp()" 
-                            style="
-                                padding: 0.75rem 1.5rem;
-                                border: none;
-                                border-radius: 12px;
-                                background: white;
-                                color: #667eea;
-                                cursor: pointer;
-                                font-size: 16px;
-                                font-weight: bold;
-                            "
+                           
                         >
                             重新載入
                         </button>
                         <button 
                             onclick="errorHandler.clearAndReload()" 
-                            style="
-                                padding: 0.75rem 1.5rem;
-                                border: 2px solid white;
-                                border-radius: 12px;
-                                background: transparent;
-                                color: white;
-                                cursor: pointer;
-                                font-size: 16px;
-                            "
+                           
                         >
                             清除數據並重新載入
                         </button>
                     </div>
 
-                    <div style="margin-top: 1.5rem; font-size: 0.85rem; opacity: 0.7;">
+                    <div ">
                         錯誤報告已保存在本地存儲中
                     </div>
                 </div>

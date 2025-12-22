@@ -101,7 +101,16 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
-        webView.addJavascriptInterface(AndroidBridge(this, BackgroundWorker(this)), "AndroidBridge")
+        // val database = AppDatabase.expenseDao()
+
+        // val repository = LedgerRepository(database.expenseDao())
+        val worker = BackgroundWorker(this)
+
+        webView.addJavascriptInterface(
+                AndroidBridge(this, worker, java.lang.ref.WeakReference(webView)),
+                "AndroidBridge"
+        )
+
         setContentView(rootLayout)
         webView.loadUrl(LOCAL_URL) // 此處可調整 WebView 前端入口位置
     }

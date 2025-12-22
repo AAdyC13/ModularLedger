@@ -110,18 +110,25 @@ class Runtime {
                 bridge,
                 uiManager.createAgent('ComponentManager')
             );
+            this.logger.debug('ComponentManager build successfully');
 
+            this.logger.debug('All system object build successfully');
             // --------------------------------------------
             // 3. 並行初始化可 async import 的管理器
             // --------------------------------------------
-            await Promise.all([
-                errorHandler.init(),
-                modulesManager.init(new Logger('Module')),
-                pageManager.init(new Logger('Page')),
-                elementManager.init(new Logger('Element')),
-                router.init(),
-                componentManager.init(),
-            ]);
+            try {
+                await Promise.all([
+                    errorHandler.init(),
+                    modulesManager.init(new Logger('Module')),
+                    pageManager.init(new Logger('Page')),
+                    elementManager.init(new Logger('Element')),
+                    router.init(),
+                    componentManager.init(),
+                ]);
+            } catch (initError) {
+                this.logger.error(`System initialization error: ${initError}`);
+                throw Error('System initialization failed');
+            }
             this.logger.debug('All System initialized');
 
 
