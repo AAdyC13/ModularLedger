@@ -17,38 +17,37 @@ export class ModulesManager {
      * 初始化模組管理器
      */
     async init(logger_forModule) {
-        this.logger.debugA('Initializing ModulesManager...');
         this.eventAgent.on('CM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('EM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('PM:analysis_complete', this.handleAnalysisComplete.bind(this));
-        this.logger.debugA('Initializing ModulesManager...');
         try {
             const schema = await this.bridge.getSchema('module-info.schema');
             const techSchema = await this.bridge.getSchema('module-tech.schema');
-            this.logger.debugA('Initializing ModulesManager...');
             // this.logger.debug(`Module schema loaded: ${typeof schema}, content: ${JSON.stringify(schema)}`);
             if (!schema || !techSchema) {
                 throw new Error('Failed to load module schema from Android');
             }
             Module.init(logger_forModule, schema, techSchema);
-            this.logger.debugA('Initializing ModulesManager...');
         } catch (error) {
             this.logger.error('Failed to load Module schema: ' + error.message);
             this.schemaLoadFailed = true;
             this.logger.warn('Module loading will be restricted to whitelist only');
         }
-
-        await this.loadSystemModules();
+        try {
+            await this.enableSystemModules();
+        } catch (error) {
+            this.logger.error('Error enabling system modules: ' + error);
+        }
         const summaries = Object.values(this.moduleDict)
             .map(m => `  - ${m.getSummary()}`)
             .join('\n');
-        this.logger.debug(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
+        this.logger.info(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
     }
     handleAnalysisComplete(data) {
         const modID = data.modID;
         const sys = data.sysName;
         const mod = this.moduleDict[modID];
-        this.logger.debug(`Handling analysis complete for module: ${modID}, system: ${sys}`);
+        // this.logger.debug(`Handling analysis complete for module: ${modID}, system: ${sys}`);
         if (!mod) {
             this.logger.warn(`Module ${modID} not found in moduleDict`);
             return;

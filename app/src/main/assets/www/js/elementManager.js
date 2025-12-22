@@ -229,7 +229,7 @@ export class ElementManager {
         this.elementsByPage[pageID].add(id);
         this.elementsByMod[modID] ??= new Set();
         this.elementsByMod[modID].add(id);
-        this.logger.debug(`Element created : ${id}`);
+        // this.logger.debug(`Element created : ${id}`);
         return id;
     }
 

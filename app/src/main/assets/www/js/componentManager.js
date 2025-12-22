@@ -205,7 +205,7 @@ export class ComponentManager {
             throw new Error(`Failed to load JS file: ${path} in module: ${folderName}`);
         }
         if (!res.default) {
-            //this.logger.debugA(`${res},${res.defult} `);
+            // this.logger.debugA(`${res},${res.defult} `);
             throw new Error(`Failed to load default export from ${path} in module ${folderName}`);
         }
         return new res.default;
@@ -335,7 +335,7 @@ class ComponentAgent {
     }
     eventPlatform_on(eventName, handler) {
         const name = `Component:${this.id}:${eventName}`;
-        this.logger.debug(`Subscribing to event [${name}] for Component ${this.id}`);
+        // this.logger.debug(`Subscribing to event [${name}] for Component ${this.id}`);
         try {
             const id = this.eventPlatform.on(name, handler);
             this.eventIDs[id] = id;
