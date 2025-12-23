@@ -129,7 +129,10 @@ export default class SettingHubView {
                         break;
                 }
             } else {
-                await this.packageComponents[componentName][methodName](payload);
+                try { await this.packageComponents[componentName][methodName](payload); }
+                catch (error) {
+                    this.logger.error(`Error calling method ${methodName} on component ${componentName}: ${error}`);
+                }
             }
         }
 

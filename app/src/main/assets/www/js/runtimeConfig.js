@@ -23,7 +23,7 @@ const runtimeConfig = {
     /**
      * 應用版本
      */
-    version: '0.1.0',
+    version: '1.3.0',
 
     /**
      * 運行時超時設置 (秒)
