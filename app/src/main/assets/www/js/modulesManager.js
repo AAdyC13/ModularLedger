@@ -17,38 +17,37 @@ export class ModulesManager {
      * 初始化模組管理器
      */
     async init(logger_forModule) {
-        this.logger.debugA('Initializing ModulesManager...');
         this.eventAgent.on('CM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('EM:analysis_complete', this.handleAnalysisComplete.bind(this));
         this.eventAgent.on('PM:analysis_complete', this.handleAnalysisComplete.bind(this));
-        this.logger.debugA('Initializing ModulesManager...');
         try {
             const schema = await this.bridge.getSchema('module-info.schema');
             const techSchema = await this.bridge.getSchema('module-tech.schema');
-            this.logger.debugA('Initializing ModulesManager...');
             // this.logger.debug(`Module schema loaded: ${typeof schema}, content: ${JSON.stringify(schema)}`);
             if (!schema || !techSchema) {
                 throw new Error('Failed to load module schema from Android');
             }
             Module.init(logger_forModule, schema, techSchema);
-            this.logger.debugA('Initializing ModulesManager...');
         } catch (error) {
             this.logger.error('Failed to load Module schema: ' + error.message);
             this.schemaLoadFailed = true;
             this.logger.warn('Module loading will be restricted to whitelist only');
         }
-
-        await this.loadSystemModules();
+        try {
+            await this.loadSystemModules();
+        } catch (error) {
+            this.logger.error('Error enabling system modules: ' + error);
+        }
         const summaries = Object.values(this.moduleDict)
             .map(m => `  - ${m.getSummary()}`)
             .join('\n');
-        this.logger.debug(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
+        this.logger.info(`System modules loaded: ${Object.keys(this.moduleDict).length} modules\n${summaries}`);
     }
     handleAnalysisComplete(data) {
         const modID = data.modID;
         const sys = data.sysName;
         const mod = this.moduleDict[modID];
-        this.logger.debug(`Handling analysis complete for module: ${modID}, system: ${sys}`);
+        // this.logger.debug(`Handling analysis complete for module: ${modID}, system: ${sys}`);
         if (!mod) {
             this.logger.warn(`Module ${modID} not found in moduleDict`);
             return;
@@ -80,10 +79,7 @@ export class ModulesManager {
         return this.whitelist.includes(moduleId);
     }
 
-    /**
-     * 載入系統模組清單
-     * @returns {Array<Module>} 模組清單
-     */
+
     async loadSystemModules() {
         try {
             const list = await this.bridge.getSystemModulesList();
@@ -301,11 +297,11 @@ class Module {
         this.status = {
             enabled: false,
             techLoaded: false,
-            EM_check: true,
-            CM_check: true,
-            PMe_check: true, // PageManager's element check
-            PMc_check: true,// PageManager's creating check
-            MD_check: true
+            EM_check: false,
+            CM_check: false,
+            PMe_check: false, // PageManager's element check
+            PMc_check: false,// PageManager's creating check
+            MD_check: false
         }
 
         // 標記是否為白名單模組(未經驗證)
@@ -333,29 +329,28 @@ class Module {
                 return false;
             }
         }
-        if (!data.permissions) {
+                if (!data.permissions) {
             Module.logger.warn(`No permissions defined for module ${this.id}`);
-        } else {
-            this.permissions = new Set(data.permissions);
-
-            if (this.permissions.has('registerPages')) {
-                this.tech["registerPages"] = data.registerPages || [];
-                this.status.PMc_check = false;
-            }
-            if (this.permissions.has('registerElements')) {
-                this.tech["registerElements"] = data.registerElements || [];
-                this.status.EM_check = false;
-                // this.status.PMe_check = false;
-            }
-            if (this.permissions.has('registerComponents')) {
-                this.tech["registerComponents"] = data.registerComponents || [];
-                this.status.CM_check = false;
-            }
-            if (this.permissions.has('moduleDpendencies')) {
-                this.tech["moduleDpendencies"] = data.moduleDpendencies || [];
-                this.status.MD_check = false;
-            }
         }
+        this.permissions = new Set(data.permissions || []);
+
+        // 使用設定檔來處理權限，更具可讀性與可擴展性
+        const permissionConfigs = [
+            { name: 'registerPages',      statuses: ['PMc_check'] },
+            { name: 'registerElements',   statuses: ['EM_check', 'PMe_check'] },
+            { name: 'registerComponents', statuses: ['CM_check'] },
+            { name: 'moduleDependencies',  statuses: ['MD_check'] }
+        ];
+
+        permissionConfigs.forEach(config => {
+            if (this.permissions.has(config.name)) {
+                this.tech[config.name] = data[config.name] || [];
+            } else {
+                config.statuses.forEach(status => {
+                    this.status[status] = true;
+                });
+            }
+        });
         this.status.techLoaded = true;
         Module.logger.debug(`Tech loaded for module: ${this.id}`);
         return true;

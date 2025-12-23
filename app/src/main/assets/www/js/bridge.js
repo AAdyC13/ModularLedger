@@ -58,7 +58,7 @@ export class Bridge {
         this.pendingTasks.delete(taskId);
 
         if (status === 'SUCCESS') {
-            this.logger.debug(`Task ${taskId} completed successfully, data: ${JSON.stringify(data)}`);
+            // this.logger.debug(`Task ${taskId} completed successfully, data: ${JSON.stringify(data)}`);
             task.resolve(data);
         } else {
 
@@ -93,7 +93,7 @@ export class Bridge {
             }, timeoutMs);
 
             // 掛起任務
-            this.logger.debug(`Calling Async Action: ${action},payload: ${JSON.stringify(payload)}, Task ID: ${taskId}`);
+            // this.logger.debug(`Calling Async Action: ${action},payload: ${JSON.stringify(payload)}, Task ID: ${taskId}`);
             this.pendingTasks.set(taskId, { resolve, reject, timer });
 
             // 發送請求

@@ -6,6 +6,8 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">
     <title>Modular Ledger</title>
+    <!-- Logger Polyfill: 確保在所有腳本前執行 -->
+    <script src="js/logger-polyfill.js"></script>
     <!-- 系統級 JS 入口 -->
     <script type="module" src="https://appassets.androidplatform.net/assets/www/js/runtime.js"></script>
 
@@ -24,7 +26,7 @@
         <div class="sys-loading-page-title1">Modular Ledger</div>
         <div class="sys-loading-page-title2">模組化記帳系統</div>
         <div class="sys-loading-page-logger" id="sys_loading_page_logger"></div>
-        <div class="sys-loading-page-subtitle">version: 1.2.0</div>
+        <div class="sys-loading-page-subtitle">version: 1.3.0</div>
     </div>
     <div id="app" class="hidden"></div>
 </body>

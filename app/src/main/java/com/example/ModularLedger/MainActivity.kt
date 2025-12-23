@@ -2,6 +2,9 @@ package com.example.ModularLedger
 
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -15,6 +18,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebViewAssetLoader
+import com.example.ModularLedger.util.LogHelper
 import java.io.ByteArrayInputStream
 
 class MainActivity : AppCompatActivity() {
@@ -45,6 +49,45 @@ class MainActivity : AppCompatActivity() {
         settings.allowFileAccess = false // 不要開 file:// 讀取
         settings.allowContentAccess = false
         settings.cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+
+        // 掛載 WebChromeClient 來攔截前端 Log
+        webView.webChromeClient =
+                object : WebChromeClient() {
+                    override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+                        // 在 Release Build 中，不輸出日誌，保護用戶隱私
+                        // if (!BuildConfig.DEBUG) {
+                        //     return true
+                        // }
+
+                        val message = consoleMessage.message()
+                        val originalSourceId = consoleMessage.sourceId() ?: "Unknown"
+                        val lineNumber = consoleMessage.lineNumber()
+                        val tag = "ModularWeb" // 統一前綴方便過濾
+
+                        val priority =
+                                when (consoleMessage.messageLevel()) {
+                                    ConsoleMessage.MessageLevel.ERROR -> Log.ERROR
+                                    ConsoleMessage.MessageLevel.WARNING -> Log.WARN
+                                    ConsoleMessage.MessageLevel.LOG -> Log.INFO
+                                    ConsoleMessage.MessageLevel.DEBUG -> Log.DEBUG
+                                    else -> Log.VERBOSE
+                                }
+
+                        // 清理 sourceId，讓路徑更簡潔
+                        val cleanSourceId =
+                                originalSourceId.removePrefix(
+                                        "https://appassets.androidplatform.net/assets/www/"
+                                )
+
+                        val formattedMessage = "[Web] [${cleanSourceId}:${lineNumber}] $message"
+
+                        // 使用 LogHelper 處理長訊息
+                        LogHelper.printSplitLog(priority, tag, formattedMessage)
+
+                        // return true 表示我們已經處理了這個日誌，不需要系統再重複輸出
+                        return true
+                    }
+                }
 
         // 建立 AssetLoader
         assetLoader =

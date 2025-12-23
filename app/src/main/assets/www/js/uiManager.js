@@ -1,6 +1,6 @@
 let uiManagerInstance = null;
 
-export default class UIManager {
+class UIManager {
     constructor() {
         this.logger = null;
         this.eventHub = null;
@@ -172,8 +172,72 @@ export default class UIManager {
                 return Promise.resolve(null);
         }
     }
-}
+    _showInfoPanel(title, contentHtml) {
+        const overlay = document.createElement('div');
+        overlay.className = 'sys-info-overlay';
 
+        const panel = document.createElement('div');
+        panel.className = 'sys-info-panel';
+
+        panel.innerHTML = `
+            <div class="info-panel-header">
+                <h3 class="info-panel-title">${title}</h3>
+                <button class="info-panel-close">&times;</button>
+            </div>
+            <div class="info-panel-body">
+                ${contentHtml}
+            </div>
+        `;
+
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            overlay.classList.add('visible');
+            panel.classList.add('visible');
+        });
+
+        const closePanel = () => {
+            overlay.classList.remove('visible');
+            panel.classList.remove('visible');
+            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+        };
+
+        panel.querySelector('.info-panel-close').onclick = closePanel;
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                closePanel();
+            }
+        });
+    }
+
+    adjustLayout() {
+        const title = "建議與回饋";
+        const contentHtml = `
+            <p>感謝您使用本應用程式！</p>
+            <p>目前應用程式正在積極開發中，如果您在使用過程中遇到任何問題或有任何建議，歡迎隨時聯繫我們。</p>
+            <div class="info-panel-repo-container">
+                <p>Github Repository:</p>
+                <div class="info-panel-code">https://github.com/AAdyC13/ModularLedger</div>
+            </div>
+        `;
+        this._showInfoPanel(title, contentHtml);
+    }
+    aboutApp() {
+        const title = "關於本應用程式";
+        const contentHtml = `
+            <div class="about-app-content">
+                <h4>模組化記帳系統 (Modular Ledger)</h4>
+                <p>版本: 1.3.0 (demo版)</p>
+                <hr>
+                <p class="license-info">This software is Source Available and free for personal, educational, and internal use. It is licensed under the Apache License 2.0 combined with the Commons Clause.</p>
+                <p class="copyright">© 2025 [AAdyC13]</p>
+            </div>
+        `;
+        this._showInfoPanel(title, contentHtml);
+    }
+}
 export const uiManager = new UIManager();
 
 export class UIAgent {
@@ -181,7 +245,12 @@ export class UIAgent {
         this.manager = manager;
         this.moduleName = moduleName || 'Unknown';
     }
-
+    aboutApp() {
+        uiManager.aboutApp();
+    }
+    adjustLayout() {
+        uiManager.adjustLayout();
+    }
     /**
      * 顯示一個從角落滑入的提示訊息
      * @param {string} message - 要顯示的訊息

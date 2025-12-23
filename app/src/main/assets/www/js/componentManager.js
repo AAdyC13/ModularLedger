@@ -14,16 +14,6 @@ export class ComponentManager {
         this.componentsByMod = {};     // 輔助索引2
         this.modCounter = {}; // 計數每個模組的插件數量，目前由於是mod自定義id，所以沒有實際作用
 
-        // this.definitions = new Map();
-        // this.definitionAliases = new Map();
-        // this.templateCache = new Map();
-        // this.classRegistryByComponent = new Map();
-        // this.classRegistryByName = new Map();
-        // this.handlesById = new Map();
-        // this.singletons = new Map();
-        // this.eventHub = new EventHub();
-
-
     }
     init() {
         this.eventAgent.on("MM:Module_enabled:registerComponents", this.analysisBlueprint.bind(this));
@@ -156,6 +146,23 @@ export class ComponentManager {
         // 載入 Module 提供的 Component.JS 物件
         const ComponentObject = await this.loadJSfile(folderName, compTech.entry);
 
+        const injectedTools = {
+            callUI: {},
+            systemInterface: {}
+        };
+        for (const tool of compTech.component_tools || []) {
+
+            const [toolType, toolName] = tool.split(':');
+            // 警告! 這樣寫沒有 toolName 的查證
+            if (toolType === 'callUI') {
+
+                injectedTools['callUI'][`${toolName}`] = (args) => this.callUI(toolName, id, args);
+                // this.logger.debug(`Tool function assigned. typeof injectedTools.callUI.${toolName} is "${injectedTools['callUI']}"`);
+            }
+            //未來可擴充 systemInterface 等其他工具
+        }
+
+
         this.components[id] = new ComponentAgent(
             id,
             type,
@@ -167,7 +174,8 @@ export class ComponentManager {
             new TimerBucket(),
             new Logger(`Component:${id}`),
             new ListenerRegistry(),
-            compTech.panel_location
+            compTech.panel_location,
+            injectedTools
         );
         if (dom) {
             this.componentsByPage[compTech.panel_location.pageID] ??= new Set();
@@ -205,7 +213,7 @@ export class ComponentManager {
             throw new Error(`Failed to load JS file: ${path} in module: ${folderName}`);
         }
         if (!res.default) {
-            //this.logger.debugA(`${res},${res.defult} `);
+            // this.logger.debugA(`${res},${res.defult} `);
             throw new Error(`Failed to load default export from ${path} in module ${folderName}`);
         }
         return new res.default;
@@ -233,6 +241,32 @@ export class ComponentManager {
 
         return host;
     }
+    callUI(methodName, componentName, args) {
+        switch (methodName) {
+            case 'Toast':
+                this.ui['showToast'](args.message, args.type, args.duration);
+                break;
+            case 'Alert':
+                this.ui['alert'](componentName, args.message, args.buttonText);
+                break;
+            case 'Prompt':
+                this.ui['prompt'](componentName, args.message, args.placeholder, args.okText, args.cancelText);
+                break;
+            case 'Wait':
+                this.ui['wait'](componentName, args.message, args.timeout);
+                break;
+            case 'AdjustLayout':
+                this.ui['adjustLayout']();
+                break;
+            case 'AboutApp':
+                this.ui['aboutApp']();
+                break;
+            default:
+                this.logger.warn(`ComponentManager.callUI: Unknown methodName: ${methodName}`);
+                return;
+        }
+
+    }
 
 }
 class ComponentAgent {
@@ -252,7 +286,8 @@ class ComponentAgent {
     constructor(
         id, type, modID, dependenciesComponent = [],
         ComponentObject, dom = null, eventPlatform, timerBucket, logger, listenerRegistry,
-        panel_location = null) {
+        panel_location = null,
+        injectedTools) {
         this.id = id;
         this.type = type;
         this.modID = modID;
@@ -262,13 +297,14 @@ class ComponentAgent {
         this.timerBucket = timerBucket;
         this.logger = logger;
         this.listenerRegistry = listenerRegistry; // Agent 擁有監聽器管理介面
+        this.injectedTools = injectedTools;
+        // this.logger.debug(`this.injectedTools: ${JSON.stringify(this.injectedTools)}`);
 
         this.object = ComponentObject; // Component 物件實例
 
         // 此為 Component 的未經包裝 shadow DOM 節點，禁止 Component 直接操作
         this.dom = dom; // 如果是 Panel 類型則有 HTML物件，否則為 null
         this.panel_location = panel_location;
-
     }
     async init() {
         this.eventPlatform.on(`Component:${this.id}:onDestroy`, this.ondestroy.bind(this));
@@ -280,11 +316,13 @@ class ComponentAgent {
             myDOM = ComponentAgent.createProxyDOM(this.dom, this.listenerRegistry);
             // 警告! Proxy系統未實現，先直接給原始DOM
         }
+
         this.interface = {
             myDOM: myDOM,
             tools: {
                 timer: this.timerBucket,
-                logger: this.logger
+                logger: this.logger,
+                ...this.injectedTools
             },
             // CM內部事件平台
             eventPlatform: {
@@ -335,7 +373,7 @@ class ComponentAgent {
     }
     eventPlatform_on(eventName, handler) {
         const name = `Component:${this.id}:${eventName}`;
-        this.logger.debug(`Subscribing to event [${name}] for Component ${this.id}`);
+        // this.logger.debug(`Subscribing to event [${name}] for Component ${this.id}`);
         try {
             const id = this.eventPlatform.on(name, handler);
             this.eventIDs[id] = id;

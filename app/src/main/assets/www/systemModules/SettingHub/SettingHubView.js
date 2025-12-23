@@ -4,6 +4,10 @@ export default class SettingHubView {
         this.container = null;
         this.eventPlatform = null;
         this.containerChecked = false;
+        this.logger = null;
+        this.callUI = null;
+        this.systemInterface = null;
+        this.packageComponents = null;
 
         this.options = [
             {
@@ -12,7 +16,8 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "",
-                    methodName: ""
+                    methodName: "",
+                    payload: {}
                 },
             },
             {
@@ -21,7 +26,8 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "",
-                    methodName: ""
+                    methodName: "",
+                    payload: {}
                 },
             },
             {
@@ -30,7 +36,8 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "",
-                    methodName: ""
+                    methodName: "",
+                    payload: {}
                 },
             },
             {
@@ -39,7 +46,8 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "",
-                    methodName: ""
+                    methodName: "",
+                    payload: {}
                 },
             },
 
@@ -49,7 +57,8 @@ export default class SettingHubView {
                 handler: {
                     moduleID: "systemModule.SettingHubView",
                     componentName: "",
-                    methodName: ""
+                    methodName: "",
+                    payload: {}
                 },
             },
             {
@@ -57,8 +66,8 @@ export default class SettingHubView {
                 description: "提供反饋或建議以幫助我們改進應用程式。",
                 handler: {
                     moduleID: "systemModule.SettingHubView",
-                    componentName: "",
-                    methodName: ""
+                    componentName: "SettingHubView",
+                    methodName: "AdjustLayout"
                 },
             },
             {
@@ -66,8 +75,9 @@ export default class SettingHubView {
                 description: "查看應用程式版本資訊、開發者資訊及相關法律文件。",
                 handler: {
                     moduleID: "systemModule.SettingHubView",
-                    componentName: "",
-                    methodName: ""
+                    componentName: "SettingHubView",
+                    methodName: "AboutApp"
+
                 },
             },
         ];
@@ -76,6 +86,9 @@ export default class SettingHubView {
     async init(Agent) {
         this.Agent = Agent;
         this.logger = Agent.tools.logger;
+        this.callUI = Agent.tools.callUI;
+        this.systemInterface = Agent.tools.systemInterface;
+        this.packageComponents = Agent.packageComponents;
         this.eventPlatform = Agent.eventPlatform;
         this.setOnEvents();
         this.logger.debug(`Recorder initialized`);
@@ -94,23 +107,47 @@ export default class SettingHubView {
             }
         });
     }
-    optionsHandler(data) {
-        //這裡我寫，data預期是 {
+    async optionsHandler(data) {
+        // data = {
         //     moduleID: "something",
-        //         componentName: "something",
-        //             methodName: "something"
+        //     componentName: "something",
+        //     methodName: "something",
+        //     payload: { ... }
         // }
+        const { moduleID, componentName, methodName, payload } = data;
+        if (moduleID === "systemModule.SettingHubView") {
+            if (componentName === "SettingHubView") {
+                switch (methodName) {
+                    case "AdjustLayout":
+                        this.callUI["AdjustLayout"]();
+                        break;
+                    case "AboutApp":
+                        this.callUI["AboutApp"]();
+                        break;
+                    default:
+                        this.logger.warn(`SettingHubView: Unknown this.methodName: ${methodName}`);
+                        break;
+                }
+            } else {
+                try { await this.packageComponents[componentName][methodName](payload); }
+                catch (error) {
+                    this.logger.error(`Error calling method ${methodName} on component ${componentName}: ${error}`);
+                }
+            }
+        }
+
     }
     optionsGenerator() {
         const contentContainer = this.container.querySelector('#setting-main');
 
-        contentContainer.addEventListener('click', (e) => {
+        contentContainer.addEventListener('click', async (e) => {
             if (e.target.classList.contains('setting-option-btn')) {
                 const { moduleId, componentName, methodName } = e.target.dataset;
-                this.optionsHandler({
+                await this.optionsHandler({
                     moduleID: moduleId,
                     componentName: componentName,
-                    methodName: methodName
+                    methodName: methodName,
+                    payload: e.target.dataset.payload ? JSON.parse(e.target.dataset.payload) : {}
                 });
             }
         });
@@ -124,6 +161,7 @@ export default class SettingHubView {
                 btn.dataset.moduleId = option.handler.moduleID;
                 btn.dataset.componentName = option.handler.componentName;
                 btn.dataset.methodName = option.handler.methodName;
+                btn.dataset.payload = JSON.stringify(option.handler.payload || {});
             }
 
             contentContainer.appendChild(btn);
